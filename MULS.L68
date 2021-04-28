@@ -1,0 +1,108 @@
+00001000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 4/28/2021 4:15:09 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : Final Project
+00000000                             3  * Written by : MULS (Ben, Tensae, Jose, Gabriela)
+00000000                             4  * Date       : April 28, 2021
+00000000                             5  * Description: 
+00000000                             6  *-----------------------------------------------------------
+00001000                             7  MAIN:       ORG         $1000
+00001000                             8  
+00001000  =0000000D                  9  CR:         EQU         $0D
+00001000  =0000000A                 10  LF:         EQU         $0A
+00001000                            11  
+00001000= 00000000                  12  staHex:     DC.L        $0
+00001004= 00000000                  13  endHex:     DC.L        $0
+00001008                            14  *-----------------------------------------------------------
+00001008                            15  * I/O Implementation
+00001008                            16  ;1. Prompt user for start and ending addresses (In hex)
+00001008                            17  ;2. User inputs their values
+00001008                            18  ;3. Check for errors
+00001008                            19  ;        Check to see if hex is too big
+00001008                            20  ;        Check to see value doesn't contain G-Z
+00001008                            21  ;        Check to see if there are no commas/special chars
+00001008                            22  ;        Check to see that starting loc, is before ending loc
+00001008                            23  ;        Check to see if value starts at odd mem location
+00001008                            24  *-----------------------------------------------------------
+00001008                            25              ;Show welcome to user
+00001008  43F9 00001034             26              LEA         Welcome,A1
+0000100E  103C 000E                 27              MOVE.B      #14,D0
+00001012  4E4F                      28              TRAP        #15
+00001014                            29    
+00001014                            30  startingPrompt:
+00001014                            31            
+00001014                            32              ;Ask the user for the starting hex
+00001014  43F9 00001058             33              LEA         userSA,A1
+0000101A  103C 000E                 34              MOVE.B      #14,D0
+0000101E  4E4F                      35              TRAP        #15
+00001020                            36              
+00001020                            37              ;Input for the hex
+00001020  7002                      38              MOVE.L      #2,D0
+00001022  4E4F                      39              TRAP        #15
+00001024                            40              
+00001024                            41              ;Check for errors
+00001024                            42              ;If error occurred, loop back to startingPrompt
+00001024                            43              ;BEQ         startingPrompt
+00001024                            44              
+00001024                            45  endingPrompt:
+00001024                            46              
+00001024                            47              ;Ask the user for the ending hex
+00001024  43F9 0000107D             48              LEA         userEA,A1
+0000102A  103C 000E                 49              MOVE.B      #14,D0
+0000102E  4E4F                      50              TRAP        #15
+00001030                            51              
+00001030                            52              ;Input for the hex
+00001030  700E                      53              MOVE.L      #14,D0
+00001032  4E4F                      54              TRAP        #15
+00001034                            55      
+00001034                            56              ;Check for errors
+00001034                            57              ;If error occurred, loop back to endingPrompt
+00001034                            58              ;BEQ        endingPrompt
+00001034                            59  
+00001034                            60  ;-----------------------------------------------------------
+00001034                            61  ;MESSAGES
+00001034                            62  ;-----------------------------------------------------------
+00001034= 57 65 6C 63 6F 6D ...     63  Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
+00001058= 50 6C 65 61 73 65 ...     64  userSA      DC.B        'Please enter your starting address',CR,LF,0
+0000107D= 50 6C 65 61 73 65 ...     65  userEA      DC.B        'Please enter your ending address',CR,LF,0
+000010A0                            66  
+000010A0                            67  ;-----------------------------------------------------------
+000010A0                            68  ;ERRORS
+000010A0                            69  ;-----------------------------------------------------------
+000010A0= 45 52 52 4F 52 3A ...     70  toobig      DC.B        'ERROR: The address is too big',CR,LF,0
+000010C0= 45 52 52 4F 52 3A ...     71  invalCh     DC.B        'ERROR: Invalid Characters used',CR,LF,0
+000010E1= 45 52 52 4F 52 3A ...     72  odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
+0000110E                            73  
+0000110E                            74  
+0000110E                            75  
+0000110E                            76  *-----------------------------------------------------------
+0000110E                            77  * OpCode Implementation
+0000110E                            78  *-----------------------------------------------------------
+0000110E                            79  *-----------------------------------------------------------
+0000110E                            80  * Addressing Mode Implementation
+0000110E                            81  *-----------------------------------------------------------
+0000110E                            82  
+0000110E                            83      END    MAIN 
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+CR                  D
+ENDHEX              1004
+ENDINGPROMPT        1024
+INVALCH             10C0
+LF                  A
+MAIN                1000
+ODD                 10E1
+STAHEX              1000
+STARTINGPROMPT      1014
+TOOBIG              10A0
+USEREA              107D
+USERSA              1058
+WELCOME             1034
