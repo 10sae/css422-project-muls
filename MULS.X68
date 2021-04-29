@@ -34,15 +34,45 @@ startingPrompt:
             MOVE.B      #14,D0
             TRAP        #15
             
-            ;Input for the hex
-            MOVE.L      #2,D0
+            ;Input for the hex (D1 equals number of chars)
+            MOVE.W      #2,D0
             TRAP        #15
             
-            MOVE.L      D1,staHex
+            ;Place one character on a stack, if end of stack, then go to endingPrompt
+            ;   if between $41 and $46 [included] (Meaning the character is a letter)
+            ;        BRA    letter
+            ;
+            ;   if between $30 and $39 [included] (Meaning the character is a number)
+            ;        BRA    number
+            ;
+            ;   Else, the characters is a special one, 
+            ;        return error
+            ;        BRA    startingPrompt
+            ;
+            ;Loop byte-by-byte through the hex until the end (Right-most digit)
             
-            ;Check for errors
-            ;If error occurred, loop back to startingPrompt
-            ;BEQ         startingPrompt
+            ;Move the converted hex into staHex
+            
+            
+            ;A42A
+            ;0000 0000 0000 0000 1010 0100 0010 1010
+            ;shift left 28 (1010 0000.....)   
+            ;shift right 28 times (0000..... 1010)
+            ;compare 1,3,5,7,9,B,D,F with A
+            ;if even continue work
+            ;if odd
+            ;   return error
+            ;   BRA startingPrompt
+            
+            
+            ;If more than 8 bytes
+            ;      return error
+            ;      BRA      startingPrompt
+            ;
+            
+            ;Reaches here if the hex number is good
+            ;BRA       endingPrompt
+            
             
 endingPrompt:
             
@@ -51,17 +81,53 @@ endingPrompt:
             MOVE.B      #14,D0
             TRAP        #15
             
-            ;Input for the hex
-            MOVE.L      #14,D0
+            ;Input for the hex (D1 equals number of chars)
+            MOVE.W      #14,D0
             TRAP        #15
             
-            MOVE.L      D1,endHex
+            MOVE.W      D1,endHex
             
+            ;Place one character on a stack, if end of stack, then go to endingPrompt
+            ;   if between $41 and $46 [included] (Meaning the character is a letter)
+            ;        BRA    letter
+            ;
+            ;   if between $30 and $39 [included] (Meaning the character is a number)
+            ;        BRA    number
+            ;
+            ;   Else, the characters is a special one, 
+            ;        return error
+            ;        BRA    startingPrompt
+            ;
+            ;Loop byte-by-byte through the hex until the end (Right-most digit)
+            
+            ;Move the converted hex into staHex
+            
+            ;Compare the ending address w/ starting
+            ;if endAdd is less than staAdd
+            ;    return error
+            ;    BRA    endingPrompt
     
-            ;Check for errors
-            ;If error occurred, loop back to endingPrompt
-            ;BEQ        endingPrompt
+            ;A42A
+            ;0000 0000 0000 0000 1010 0100 0010 1010
+            ;shift left 28 (1010 0000.....)
+            ;shift right 28 times (0000..... 1010)
+            ;compare 1,3,5,7,9,B,D,F with A
+            ;if even continue work
+            ;if odd
+            ;   return error
+            ;   BRA startingPrompt
 
+            ;If more than 8 bytes
+            ;      return error
+            ;      BRA      startingPrompt
+            ;
+
+    
+
+letter:
+            ;subract $31
+number:
+            ;subtract $30
 ;-----------------------------------------------------------
 ;MESSAGES
 ;-----------------------------------------------------------
