@@ -71,6 +71,11 @@ letter:
             ;Move the value back to our register
             MOVE.B      D3,(A1)+
             
+            ;Shift D5 left to make room for next hex value
+            ASL.L       #4, D6
+            ;Move value to D5
+            ADD.B      D3, D6
+            
             BRA         convert
             
 
@@ -90,6 +95,11 @@ number:
            ;Move the value back to our register
            MOVE.B       D3,(A1)+
  
+           ;Shift D5 left to make room for next hex value
+           ASL.L       #4, D6
+           ;Move value to D5
+           ADD.B      D3, D6
+            
            BRA convert
  
 
