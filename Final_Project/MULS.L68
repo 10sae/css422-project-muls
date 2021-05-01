@@ -1,6 +1,6 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/28/2021 5:24:52 PM
+Created On: 5/1/2021 3:00:23 PM
 
 00000000                             1  *-----------------------------------------------------------
 00000000                             2  * Title      : Final Project
@@ -27,14 +27,14 @@ Created On: 4/28/2021 5:24:52 PM
 00001008                            23  ;        Check to see if value starts at odd mem location
 00001008                            24  *-----------------------------------------------------------
 00001008                            25              ;Show welcome to user
-00001008  43F9 0000103C             26              LEA         Welcome,A1
+00001008  43F9 000010B8             26              LEA         Welcome,A1
 0000100E  103C 000E                 27              MOVE.B      #14,D0
 00001012  4E4F                      28              TRAP        #15
 00001014                            29    
 00001014                            30  startingPrompt:
 00001014                            31            
 00001014                            32              ;Ask the user for the starting hex
-00001014  43F9 00001060             33              LEA         userSA,A1
+00001014  43F9 000010DC             33              LEA         userSA,A1
 0000101A  103C 000E                 34              MOVE.B      #14,D0
 0000101E  4E4F                      35              TRAP        #15
 00001020                            36              
@@ -42,120 +42,191 @@ Created On: 4/28/2021 5:24:52 PM
 00001020  303C 0002                 38              MOVE.W      #2,D0
 00001024  4E4F                      39              TRAP        #15
 00001026                            40              
-00001026                            41              ;Place one character on a stack, if end of stack, then go to endingPrompt
-00001026                            42              ;   if between $41 and $46 [included] (Meaning the character is a letter)
-00001026                            43              ;        BRA    letter
-00001026                            44              ;
-00001026                            45              ;   if between $30 and $39 [included] (Meaning the character is a number)
-00001026                            46              ;        BRA    number
-00001026                            47              ;
-00001026                            48              ;   Else, the characters is a special one, 
-00001026                            49              ;        return error
-00001026                            50              ;        BRA    startingPrompt
-00001026                            51              ;
-00001026                            52              ;Loop byte-by-byte through the hex until the end (Right-most digit)
-00001026                            53              
-00001026                            54              ;Move the converted hex into staHex
-00001026                            55              
-00001026                            56              
-00001026                            57              ;A42A
-00001026                            58              ;0000 0000 0000 0000 1010 0100 0010 1010
-00001026                            59              ;shift left 28 (1010 0000.....)   
-00001026                            60              ;shift right 28 times (0000..... 1010)
-00001026                            61              ;compare 1,3,5,7,9,B,D,F with A
-00001026                            62              ;if even continue work
-00001026                            63              ;if odd
-00001026                            64              ;   return error
-00001026                            65              ;   BRA startingPrompt
-00001026                            66              
-00001026                            67              
-00001026                            68              ;If more than 8 bytes
-00001026                            69              ;      return error
-00001026                            70              ;      BRA      startingPrompt
-00001026                            71              ;
-00001026                            72              
-00001026                            73              ;Reaches here if the hex number is good
-00001026                            74              ;BRA       endingPrompt
-00001026                            75              
-00001026                            76              
-00001026                            77  endingPrompt:
-00001026                            78              
-00001026                            79              ;Ask the user for the ending hex
-00001026  43F9 00001085             80              LEA         userEA,A1
-0000102C  103C 000E                 81              MOVE.B      #14,D0
-00001030  4E4F                      82              TRAP        #15
-00001032                            83              
-00001032                            84              ;Input for the hex (D1 equals number of chars)
-00001032  303C 000E                 85              MOVE.W      #14,D0
-00001036  4E4F                      86              TRAP        #15
-00001038                            87              
-00001038  31C1 1004                 88              MOVE.W      D1,endHex
-0000103C                            89              
-0000103C                            90              ;Place one character on a stack, if end of stack, then go to endingPrompt
-0000103C                            91              ;   if between $41 and $46 [included] (Meaning the character is a letter)
-0000103C                            92              ;        BRA    letter
-0000103C                            93              ;
-0000103C                            94              ;   if between $30 and $39 [included] (Meaning the character is a number)
-0000103C                            95              ;        BRA    number
-0000103C                            96              ;
-0000103C                            97              ;   Else, the characters is a special one, 
-0000103C                            98              ;        return error
-0000103C                            99              ;        BRA    startingPrompt
-0000103C                           100              ;
-0000103C                           101              ;Loop byte-by-byte through the hex until the end (Right-most digit)
-0000103C                           102              
-0000103C                           103              ;Move the converted hex into staHex
-0000103C                           104              
-0000103C                           105              ;Compare the ending address w/ starting
-0000103C                           106              ;if endAdd is less than staAdd
-0000103C                           107              ;    return error
-0000103C                           108              ;    BRA    endingPrompt
-0000103C                           109      
-0000103C                           110              ;A42A
-0000103C                           111              ;0000 0000 0000 0000 1010 0100 0010 1010
-0000103C                           112              ;shift left 28 (1010 0000.....)
-0000103C                           113              ;shift right 28 times (0000..... 1010)
-0000103C                           114              ;compare 1,3,5,7,9,B,D,F with A
-0000103C                           115              ;if even continue work
-0000103C                           116              ;if odd
-0000103C                           117              ;   return error
-0000103C                           118              ;   BRA startingPrompt
-0000103C                           119  
-0000103C                           120              ;If more than 8 bytes
-0000103C                           121              ;      return error
-0000103C                           122              ;      BRA      startingPrompt
-0000103C                           123              ;
-0000103C                           124  
-0000103C                           125      
-0000103C                           126  
-0000103C                           127  letter:
-0000103C                           128              ;subract $31
-0000103C                           129  number:
-0000103C                           130              ;subtract $30
-0000103C                           131  ;-----------------------------------------------------------
-0000103C                           132  ;MESSAGES
-0000103C                           133  ;-----------------------------------------------------------
-0000103C= 57 65 6C 63 6F 6D ...    134  Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
-00001060= 50 6C 65 61 73 65 ...    135  userSA      DC.B        'Please enter your starting address',CR,LF,0
-00001085= 50 6C 65 61 73 65 ...    136  userEA      DC.B        'Please enter your ending address',CR,LF,0
-000010A8                           137  
-000010A8                           138  ;-----------------------------------------------------------
-000010A8                           139  ;ERRORS
-000010A8                           140  ;-----------------------------------------------------------
-000010A8= 45 52 52 4F 52 3A ...    141  toobig      DC.B        'ERROR: The address is too big',CR,LF,0
-000010C8= 45 52 52 4F 52 3A ...    142  invalCh     DC.B        'ERROR: Invalid Characters used',CR,LF,0
-000010E9= 45 52 52 4F 52 3A ...    143  odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
-00001116                           144  
-00001116                           145  
-00001116                           146  
-00001116                           147  *-----------------------------------------------------------
-00001116                           148  * OpCode Implementation
-00001116                           149  *-----------------------------------------------------------
-00001116                           150  *-----------------------------------------------------------
-00001116                           151  * Addressing Mode Implementation
-00001116                           152  *-----------------------------------------------------------
-00001116                           153  
-00001116                           154      END    MAIN 
+00001026  2449                      41              MOVEA.L     A1,A2
+00001028                            42         
+00001028                            43  convert:    
+00001028                            44              ;See if our counter variable is 0
+00001028  B23C 0000                 45              CMP.B       #0,D1
+0000102C                            46              ;This means that we have gone through all the characters
+0000102C  6700 003E                 47              BEQ         moreChecks
+00001030                            48              
+00001030                            49              ;Decrement the counter, this means we're about to go through another char
+00001030  5301                      50              SUB.B       #1,D1
+00001032                            51  
+00001032                            52              ;Let's move the byte stored at A1, and post increment A1
+00001032  1611                      53              MOVE.B      (A1),D3
+00001034                            54              
+00001034                            55              ;If the byte is greater than or equal to hex $40, then it's a letter
+00001034  B63C 0041                 56              CMP.B       #$41,D3
+00001038  6C00 000A                 57              BGE         letter
+0000103C                            58              
+0000103C                            59              ;If the byte is less than or equal to hex $39, then it's a number
+0000103C  B63C 0040                 60              CMP.B       #$40,D3
+00001040  6F00 0012                 61              BLE         number
+00001044                            62              
+00001044                            63  letter:
+00001044                            64              ;We do this check to see if the character is greater than or equal 'G'
+00001044  B63C 0047                 65              CMP.B       #$47,D3
+00001048                            66              ;If so, then display an error and ask the user to enter startingAdd again
+00001048  6C00 004E                 67              BGE         charError
+0000104C                            68              
+0000104C                            69              ;Subtract the Ascii value to convert to hex
+0000104C  0403 0037                 70              SUB.B       #$37,D3
+00001050                            71              ;Move the value back to our register
+00001050  12C3                      72              MOVE.B      D3,(A1)+
+00001052                            73              
+00001052  60D4                      74              BRA         convert
+00001054                            75              
+00001054                            76  
+00001054                            77  number:          
+00001054                            78             ;We do this check to see if the character is less than or equal to '/'  
+00001054  B63C 002F                 79             CMP.B        #$2F,D3
+00001058                            80             ;If so, then display an error and ask the user to enter startingAdd again
+00001058  6F00 003E                 81             BLE          charError     
+0000105C                            82   
+0000105C                            83             ;Check to see if the character is greater than or equal to ':'
+0000105C  B63C 003A                 84             CMP.B        #$3A,D3
+00001060                            85             ;If so, then display an error and ask the user to enter startingAdd again
+00001060  6C00 0036                 86             BGE          charError
+00001064                            87            
+00001064                            88             ;Subtract the Ascii value to convert to hex
+00001064  0403 0030                 89             SUB.B        #$30,D3
+00001068                            90             ;Move the value back to our register
+00001068  12C3                      91             MOVE.B       D3,(A1)+
+0000106A                            92   
+0000106A  60BC                      93             BRA convert
+0000106C                            94   
+0000106C                            95  
+0000106C                            96  moreChecks:
+0000106C                            97              
+0000106C                            98              ;Move the actual hex value into our variable
+0000106C  21D2 1000                 99              MOVE.L      (A2),staHex
+00001070                           100              
+00001070                           101              ;Copy the hex value into a temp register
+00001070  2812                     102              MOVE.L      (A2),D4
+00001072                           103              
+00001072                           104              
+00001072  1A3C 001F                105              MOVE.B      #31,D5
+00001076                           106              
+00001076  EBAC                     107              LSL.L       D5,D4
+00001078                           108  
+00001078  EAAC                     109              LSR.L       D5,D4
+0000107A                           110  
+0000107A  B83C 0001                111              CMP.B       #1,D4
+0000107E  6700 0028                112              BEQ         oddError
+00001082                           113                    
+00001082                           114                          
+00001082                           115              
+00001082                           116              
+00001082                           117              ;A42A
+00001082                           118              ;0000 0000 0000 0000 1010 0100 0010 1010
+00001082                           119              ;shift left 31 (1010 0000.....)   
+00001082                           120              ;shift right 31 times (0000..... 1010)
+00001082                           121              ;compare 1,3,5,7,9,B,D,F with A
+00001082                           122              ;if even continue work
+00001082                           123              ;if odd
+00001082                           124              ;   return error
+00001082                           125              ;   BRA startingPrompt
+00001082                           126              
+00001082                           127              
+00001082                           128              ;If more than 8 bytes
+00001082                           129              ;      return error
+00001082                           130              ;      BRA      startingPrompt
+00001082                           131              ;
+00001082                           132              
+00001082                           133              ;Reaches here if the hex number is good
+00001082                           134              ;BRA       endingPrompt
+00001082                           135              
+00001082                           136              
+00001082                           137  endingPrompt:
+00001082                           138              
+00001082                           139              ;Ask the user for the ending hex
+00001082  43F9 0000111E            140              LEA         userEA,A1
+00001088  103C 000E                141              MOVE.B      #14,D0
+0000108C  4E4F                     142              TRAP        #15
+0000108E                           143              
+0000108E                           144              ;Input for the hex (D1 equals number of chars)
+0000108E  303C 000E                145              MOVE.W      #14,D0
+00001092  4E4F                     146              TRAP        #15
+00001094                           147              
+00001094  31C1 1004                148              MOVE.W      D1,endHex
+00001098                           149              
+00001098                           150              ;Place one character on a stack, if end of stack, then go to endingPrompt
+00001098                           151              ;   if between $41 and $46 [included] (Meaning the character is a letter)
+00001098                           152              ;        BRA    letter
+00001098                           153              ;
+00001098                           154              ;   if between $30 and $39 [included] (Meaning the character is a number)
+00001098                           155              ;        BRA    number
+00001098                           156              ;
+00001098                           157              ;   Else, the characters is a special one, 
+00001098                           158              ;        return error
+00001098                           159              ;        BRA    startingPrompt
+00001098                           160              ;
+00001098                           161              ;Loop byte-by-byte through the hex until the end (Right-most digit)
+00001098                           162              
+00001098                           163              ;Move the converted hex into staHex
+00001098                           164              
+00001098                           165              ;Compare the ending address w/ starting
+00001098                           166              ;if endAdd is less than staAdd
+00001098                           167              ;    return error
+00001098                           168              ;    BRA    endingPrompt
+00001098                           169      
+00001098                           170              ;A42A
+00001098                           171              ;0000 0000 0000 0000 1010 0100 0010 1010
+00001098                           172              ;shift left 28 (1010 0000.....)
+00001098                           173              ;shift right 28 times (0000..... 1010)
+00001098                           174              ;compare 1,3,5,7,9,B,D,F with A
+00001098                           175              ;if even continue work
+00001098                           176              ;if odd
+00001098                           177              ;   return error
+00001098                           178              ;   BRA startingPrompt
+00001098                           179  
+00001098                           180              ;If more than 8 bytes
+00001098                           181              ;      return error
+00001098                           182              ;      BRA      startingPrompt
+00001098                           183              ;
+00001098                           184  
+00001098                           185      
+00001098                           186  
+00001098                           187  charError:
+00001098                           188              
+00001098  43F9 0000117E            189              LEA         invalCh,A1
+0000109E  103C 000E                190              MOVE.B      #14,D0
+000010A2  4E4F                     191              TRAP        #15
+000010A4                           192              
+000010A4  6000 FF6E                193              BRA         startingPrompt
+000010A8                           194            
+000010A8                           195  oddError:
+000010A8  43F9 0000119F            196              LEA         odd,A1
+000010AE  103C 000E                197              MOVE.B      #14,D0
+000010B2  4E4F                     198              TRAP        #15
+000010B4                           199              
+000010B4  6000 FF5E                200              BRA         startingPrompt
+000010B8                           201              
+000010B8                           202  ;-----------------------------------------------------------
+000010B8                           203  ;MESSAGES
+000010B8                           204  ;-----------------------------------------------------------
+000010B8= 57 65 6C 63 6F 6D ...    205  Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
+000010DC= 50 6C 65 61 73 65 ...    206  userSA      DC.B        'Please enter your starting hex address (Only uppercase letters)',CR,LF,0
+0000111E= 50 6C 65 61 73 65 ...    207  userEA      DC.B        'Please enter your ending hex address (Only uppercase letters)',CR,LF,0
+0000115E                           208  
+0000115E                           209  ;-----------------------------------------------------------
+0000115E                           210  ;ERRORS
+0000115E                           211  ;-----------------------------------------------------------
+0000115E= 45 52 52 4F 52 3A ...    212  toobig      DC.B        'ERROR: The address is too big',CR,LF,0
+0000117E= 45 52 52 4F 52 3A ...    213  invalCh     DC.B        'ERROR: Invalid Characters used',CR,LF,0
+0000119F= 45 52 52 4F 52 3A ...    214  odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
+000011CC                           215  
+000011CC                           216  
+000011CC                           217  
+000011CC                           218  *-----------------------------------------------------------
+000011CC                           219  * OpCode Implementation
+000011CC                           220  *-----------------------------------------------------------
+000011CC                           221  *-----------------------------------------------------------
+000011CC                           222  * Addressing Mode Implementation
+000011CC                           223  *-----------------------------------------------------------
+000011CC                           224  
+000011CC                           225      END    MAIN 
 
 No errors detected
 No warnings generated
@@ -164,18 +235,22 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
+CHARERROR           1098
+CONVERT             1028
 CR                  D
 ENDHEX              1004
-ENDINGPROMPT        1026
-INVALCH             10C8
-LETTER              103C
+ENDINGPROMPT        1082
+INVALCH             117E
+LETTER              1044
 LF                  A
 MAIN                1000
-NUMBER              103C
-ODD                 10E9
+MORECHECKS          106C
+NUMBER              1054
+ODD                 119F
+ODDERROR            10A8
 STAHEX              1000
 STARTINGPROMPT      1014
-TOOBIG              10A8
-USEREA              1085
-USERSA              1060
-WELCOME             103C
+TOOBIG              115E
+USEREA              111E
+USERSA              10DC
+WELCOME             10B8

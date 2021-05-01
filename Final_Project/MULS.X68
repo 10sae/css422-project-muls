@@ -38,26 +38,86 @@ startingPrompt:
             MOVE.W      #2,D0
             TRAP        #15
             
-            ;Place one character on a stack, if end of stack, then go to endingPrompt
-            ;   if between $41 and $46 [included] (Meaning the character is a letter)
-            ;        BRA    letter
-            ;
-            ;   if between $30 and $39 [included] (Meaning the character is a number)
-            ;        BRA    number
-            ;
-            ;   Else, the characters is a special one, 
-            ;        return error
-            ;        BRA    startingPrompt
-            ;
-            ;Loop byte-by-byte through the hex until the end (Right-most digit)
+            MOVEA.L     A1,A2
+       
+convert:    
+            ;See if our counter variable is 0
+            CMP.B       #0,D1
+            ;This means that we have gone through all the characters
+            BEQ         moreChecks
             
-            ;Move the converted hex into staHex
+            ;Decrement the counter, this means we're about to go through another char
+            SUB.B       #1,D1
+
+            ;Let's move the byte stored at A1, and post increment A1
+            MOVE.B      (A1),D3
+            
+            ;If the byte is greater than or equal to hex $40, then it's a letter
+            CMP.B       #$41,D3
+            BGE         letter
+            
+            ;If the byte is less than or equal to hex $39, then it's a number
+            CMP.B       #$40,D3
+            BLE         number
+            
+letter:
+            ;We do this check to see if the character is greater than or equal 'G'
+            CMP.B       #$47,D3
+            ;If so, then display an error and ask the user to enter startingAdd again
+            BGE         charError
+            
+            ;Subtract the Ascii value to convert to hex
+            SUB.B       #$37,D3
+            ;Move the value back to our register
+            MOVE.B      D3,(A1)+
+            
+            BRA         convert
+            
+
+number:          
+           ;We do this check to see if the character is less than or equal to '/'  
+           CMP.B        #$2F,D3
+           ;If so, then display an error and ask the user to enter startingAdd again
+           BLE          charError     
+ 
+           ;Check to see if the character is greater than or equal to ':'
+           CMP.B        #$3A,D3
+           ;If so, then display an error and ask the user to enter startingAdd again
+           BGE          charError
+          
+           ;Subtract the Ascii value to convert to hex
+           SUB.B        #$30,D3
+           ;Move the value back to our register
+           MOVE.B       D3,(A1)+
+ 
+           BRA convert
+ 
+
+moreChecks:
+            
+            ;Move the actual hex value into our variable
+            MOVE.L      (A2),staHex
+            
+            ;Copy the hex value into a temp register
+            MOVE.L      (A2),D4
+            
+            
+            MOVE.B      #31,D5
+            
+            LSL.L       D5,D4
+
+            LSR.L       D5,D4
+
+            CMP.B       #1,D4
+            BEQ         oddError
+                  
+                        
             
             
             ;A42A
             ;0000 0000 0000 0000 1010 0100 0010 1010
-            ;shift left 28 (1010 0000.....)   
-            ;shift right 28 times (0000..... 1010)
+            ;shift left 31 (1010 0000.....)   
+            ;shift right 31 times (0000..... 1010)
             ;compare 1,3,5,7,9,B,D,F with A
             ;if even continue work
             ;if odd
@@ -124,16 +184,27 @@ endingPrompt:
 
     
 
-letter:
-            ;subract $31
-number:
-            ;subtract $30
+charError:
+            
+            LEA         invalCh,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            BRA         startingPrompt
+          
+oddError:
+            LEA         odd,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            BRA         startingPrompt
+            
 ;-----------------------------------------------------------
 ;MESSAGES
 ;-----------------------------------------------------------
 Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
-userSA      DC.B        'Please enter your starting address',CR,LF,0
-userEA      DC.B        'Please enter your ending address',CR,LF,0
+userSA      DC.B        'Please enter your starting hex address (Only uppercase letters)',CR,LF,0
+userEA      DC.B        'Please enter your ending hex address (Only uppercase letters)',CR,LF,0
 
 ;-----------------------------------------------------------
 ;ERRORS
@@ -152,6 +223,7 @@ odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
 *-----------------------------------------------------------
 
     END    MAIN 
+
 
 *~Font name~Courier New~
 *~Font size~10~
