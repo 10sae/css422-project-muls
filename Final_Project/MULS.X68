@@ -28,27 +28,33 @@ endHex:     DC.L        $0
             TRAP        #15
   
 startingPrompt:
-            
             ;Ask the user for the starting hex
             LEA         userSA,A1
             MOVE.B      #14,D0
             TRAP        #15
             
+            ;Clearing A1 so we can reuse it
             MOVE.W      0, A1
             
             ;Input for the hex (D1 equals number of chars)
             MOVE.W      #2,D0
             TRAP        #15
             
+            ;Moves A1 into A2      
             MOVEA.L     A1,A2
-                   
+            
+            ;Makes sure D7 is clear incase we're looping back after an error.
+            MOVE.B      0,D7
+            
+            BRA         convert  
+convert:    
             ;Check to see if D1 is greater than 6, limiting the address to 6 characters (subject to change)
             CMP.B       #6, D1
             BGT         manyCharError  
             
-convert:    
             ;See if our counter variable is 0
             CMP.B       #0,D1
+            
             ;This means that we have gone through all the characters
             BEQ         moreChecks
             
@@ -108,14 +114,18 @@ number:
             
            BRA          convert
  
-           
+          
 moreChecks:
+            ;Determine if we're going to moreChecks1 or moreChecks2 (if we're on starting or ending address)
+            CMP.B      #1,D7
+            BEQ        moreChecks2
             
-            ;Move the actual hex value into our variable
-            MOVE.L      D6,staHex
+            BRA        moreChecks1
+ 
+moreChecks1:
             
             ;Copy the hex value into a temp register
-            MOVE.L      (A2),D4
+            MOVE.L      D6,D4
             
             ;Placeholder to shift bits, used for seeing if the address is odd. 
             MOVE.B      #31,D5
@@ -128,30 +138,36 @@ moreChecks:
 
             ;If the last bit is 1, address was odd, and throw an error. 
             CMP.B       #1,D4
-            BEQ         oddError
-                  
+            BEQ         oddError   
                         
             ;Reset address registers.
             MOVE.W      0,A2
             
-            
-            ;Reaches here if the hex number is good
-            BRA       endingPrompt
-            
+            MOVE.L      D6,staHex 
+            MOVE.L      0,D6
+            BRA       endingPrompt 
             
 endingPrompt:
+            ;D7 is if we're working with the first or second promt, used in the more checks section. 
+            MOVE.B       #1,D7
             
             ;Ask the user for the ending hex
             LEA         userEA,A1
             MOVE.B      #14,D0
             TRAP        #15
             
+            ;Clearing A1 so we can reuse it
+            MOVE.W      0, A1
+
             ;Input for the hex (D1 equals number of chars)
-            MOVE.W      #14,D0
+            MOVE.W      #2,D0
             TRAP        #15
             
-            MOVE.W      D1,endHex
+            ;Moves A1 into A2      
+            MOVEA.L     A1,A2
             
+            BRA         convert
+                        
             ;Place one character on a stack, if end of stack, then go to endingPrompt
             ;   if between $41 and $46 [included] (Meaning the character is a letter)
             ;        BRA    letter
@@ -172,21 +188,31 @@ endingPrompt:
             ;    return error
             ;    BRA    endingPrompt
     
-            ;A42A
-            ;0000 0000 0000 0000 1010 0100 0010 1010
-            ;shift left 28 (1010 0000.....)
-            ;shift right 28 times (0000..... 1010)
-            ;compare 1,3,5,7,9,B,D,F with A
-            ;if even continue work
-            ;if odd
-            ;   return error
-            ;   BRA startingPrompt
+            
+moreChecks2:
+            
+            ;Copy the hex value into a temp register
+            MOVE.L      D6,D4
+            
+            ;Placeholder to shift bits, used for seeing if the address is odd. 
+            MOVE.B      #31,D5
+            
+            ;Shifts 31 bits, isolates last bit. 
+            LSL.L       D5,D4
 
-            ;If more than 8 bytes
-            ;      return error
-            ;      BRA      startingPrompt
-            ;
+            ;Shifts it back 31 bit, isolating the last bit. 
+            LSR.L       D5,D4
 
+            ;If the last bit is 1, address was odd, and throw an error. 
+            CMP.B       #1,D4
+            BEQ         oddError   
+                        
+            ;Reset address registers.
+            MOVE.W      0,A2
+            
+            MOVE.L      D6,endHex 
+            
+            ;done, start reading memory. 
     
 
 charError:
