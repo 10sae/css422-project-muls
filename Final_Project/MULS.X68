@@ -28,18 +28,24 @@ endHex:     DC.L        $0
             TRAP        #15
   
 startingPrompt:
-          
+            
             ;Ask the user for the starting hex
             LEA         userSA,A1
             MOVE.B      #14,D0
             TRAP        #15
+            
+            MOVE.W      0, A1
             
             ;Input for the hex (D1 equals number of chars)
             MOVE.W      #2,D0
             TRAP        #15
             
             MOVEA.L     A1,A2
-       
+                   
+            ;Check to see if D1 is greater than 6, limiting the address to 6 characters (subject to change)
+            CMP.B       #6, D1
+            BGT         manyCharError  
+            
 convert:    
             ;See if our counter variable is 0
             CMP.B       #0,D1
@@ -49,8 +55,8 @@ convert:
             ;Decrement the counter, this means we're about to go through another char
             SUB.B       #1,D1
 
-            ;Let's move the byte stored at A1, and post increment A1
-            MOVE.B      (A1),D3
+            ;Let's move the byte stored at A1
+            MOVE.B      (A2),D3
             
             ;If the byte is greater than or equal to hex $40, then it's a letter
             CMP.B       #$41,D3
@@ -69,7 +75,7 @@ letter:
             ;Subtract the Ascii value to convert to hex
             SUB.B       #$37,D3
             ;Move the value back to our register
-            MOVE.B      D3,(A1)+
+            MOVE.B      D3,(A2)+
             
             ;Shift D5 left to make room for next hex value
             ASL.L       #4, D6
@@ -77,7 +83,7 @@ letter:
             ADD.B      D3, D6
             
             BRA         convert
-            
+           
 
 number:          
            ;We do this check to see if the character is less than or equal to '/'  
@@ -93,55 +99,44 @@ number:
            ;Subtract the Ascii value to convert to hex
            SUB.B        #$30,D3
            ;Move the value back to our register
-           MOVE.B       D3,(A1)+
+           MOVE.B       D3,(A2)+
  
            ;Shift D5 left to make room for next hex value
-           ASL.L       #4, D6
+           ASL.L        #4, D6
            ;Move value to D5
-           ADD.B      D3, D6
+           ADD.B        D3, D6
             
-           BRA convert
+           BRA          convert
  
-
+           
 moreChecks:
             
             ;Move the actual hex value into our variable
-            MOVE.L      (A2),staHex
+            MOVE.L      D6,staHex
             
             ;Copy the hex value into a temp register
             MOVE.L      (A2),D4
             
-            
+            ;Placeholder to shift bits, used for seeing if the address is odd. 
             MOVE.B      #31,D5
             
+            ;Shifts 31 bits, isolates last bit. 
             LSL.L       D5,D4
 
+            ;Shifts it back 31 bit, isolating the last bit. 
             LSR.L       D5,D4
 
+            ;If the last bit is 1, address was odd, and throw an error. 
             CMP.B       #1,D4
             BEQ         oddError
                   
                         
+            ;Reset address registers.
+            MOVE.W      0,A2
             
-            
-            ;A42A
-            ;0000 0000 0000 0000 1010 0100 0010 1010
-            ;shift left 31 (1010 0000.....)   
-            ;shift right 31 times (0000..... 1010)
-            ;compare 1,3,5,7,9,B,D,F with A
-            ;if even continue work
-            ;if odd
-            ;   return error
-            ;   BRA startingPrompt
-            
-            
-            ;If more than 8 bytes
-            ;      return error
-            ;      BRA      startingPrompt
-            ;
             
             ;Reaches here if the hex number is good
-            ;BRA       endingPrompt
+            BRA       endingPrompt
             
             
 endingPrompt:
@@ -209,6 +204,14 @@ oddError:
             
             BRA         startingPrompt
             
+manyCharError:  
+            LEA         manyChar, A1
+            MOVE.B      #14, D0
+            TRAP        #15
+            
+            BRA         startingPrompt
+            
+            
 ;-----------------------------------------------------------
 ;MESSAGES
 ;-----------------------------------------------------------
@@ -222,6 +225,7 @@ userEA      DC.B        'Please enter your ending hex address (Only uppercase le
 toobig      DC.B        'ERROR: The address is too big',CR,LF,0
 invalCh     DC.B        'ERROR: Invalid Characters used',CR,LF,0
 odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
+manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the address',CR,LF,0
 
 
 
