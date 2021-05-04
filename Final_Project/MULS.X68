@@ -33,20 +33,50 @@ startingPrompt:
             MOVE.B      #14,D0
             TRAP        #15
             
-            ;Clearing A1 so we can reuse it
-            MOVE.W      0, A1
+            ;Clear the registers in case we had an error
+            MOVE.L      #0,A1
+            MOVE.L      #0,A2
+            CLR.L       D3
+            CLR.L       D4
+            CLR.L       D5
+            CLR.L       D6
+           
             
             ;Input for the hex (D1 equals number of chars)
             MOVE.W      #2,D0
             TRAP        #15
             
             ;Moves A1 into A2      
-            MOVEA.L     A1,A2
+            ;MOVEA.L     A1,A2
             
             ;Makes sure D7 is clear incase we're looping back after an error.
-            MOVE.B      0,D7
+            CLR.B       D7
             
             BRA         convert  
+            
+endingPrompt:
+            ;D7 is if we're working with the first or second promt, used in the more checks section. 
+            MOVE.B       #1,D7
+            
+            ;Ask the user for the ending hex
+            LEA         userEA,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Clearing the registers so we can reuse them for the ending address
+            MOVE.L      #0,A1
+            MOVE.L      #0,A2
+            CLR.L       D6
+
+            ;Input for the hex (D1 equals number of chars)
+            MOVE.W      #2,D0
+            TRAP        #15
+            
+            ;Moves A1 into A2      
+            ;MOVEA.L     A1,A2
+            
+            BRA         convert
+
 convert:    
             ;Check to see if D1 is greater than 6, limiting the address to 6 characters (subject to change)
             CMP.B       #6, D1
@@ -141,55 +171,15 @@ moreChecks1:
             BEQ         oddError   
                         
             ;Reset address registers.
-            MOVE.W      0,A2
+            MOVE.L      #0,A2
             
+            ;Copy the value to our staHex variable
             MOVE.L      D6,staHex 
-            MOVE.L      0,D6
-            BRA       endingPrompt 
             
-endingPrompt:
-            ;D7 is if we're working with the first or second promt, used in the more checks section. 
-            MOVE.B       #1,D7
+            CLR.L       D6
+            BRA         endingPrompt     
             
-            ;Ask the user for the ending hex
-            LEA         userEA,A1
-            MOVE.B      #14,D0
-            TRAP        #15
-            
-            ;Clearing A1 so we can reuse it
-            MOVE.W      0, A1
-
-            ;Input for the hex (D1 equals number of chars)
-            MOVE.W      #2,D0
-            TRAP        #15
-            
-            ;Moves A1 into A2      
-            MOVEA.L     A1,A2
-            
-            BRA         convert
-                        
-            ;Place one character on a stack, if end of stack, then go to endingPrompt
-            ;   if between $41 and $46 [included] (Meaning the character is a letter)
-            ;        BRA    letter
-            ;
-            ;   if between $30 and $39 [included] (Meaning the character is a number)
-            ;        BRA    number
-            ;
-            ;   Else, the characters is a special one, 
-            ;        return error
-            ;        BRA    startingPrompt
-            ;
-            ;Loop byte-by-byte through the hex until the end (Right-most digit)
-            
-            ;Move the converted hex into staHex
-            
-            ;Compare the ending address w/ starting
-            ;if endAdd is less than staAdd
-            ;    return error
-            ;    BRA    endingPrompt
-    
-            
-moreChecks2:
+moreChecks2:       
             
             ;Copy the hex value into a temp register
             MOVE.L      D6,D4
@@ -208,13 +198,32 @@ moreChecks2:
             BEQ         oddError   
                         
             ;Reset address registers.
-            MOVE.W      0,A2
+            MOVE.L      #0,A2
             
+            ;Place the value in our ending hex variable
             MOVE.L      D6,endHex 
             
+            ;Make D7 a temp location to compare our starting hex
+            MOVE.L      staHex,D7
+         
+            
+            ;Compare the starting hex, with the ending hex to see if endHex is less than starting        
+            CMP.L       D7,D6
+            BMI         endGreater
+            
             ;done, start reading memory. 
-    
+            
+            ;Clear all the registers since we have the addresses stored in our variables
+            CLR.L       D3
+            CLR.L       D5
+            CLR.L       D6
+            CLR.L       D7
+            
+            BRA         ending    
 
+;-----------------------------------------------------------
+;ERROR MESSAGES
+;-----------------------------------------------------------
 charError:
             
             LEA         invalCh,A1
@@ -232,12 +241,18 @@ oddError:
             
 manyCharError:  
             LEA         manyChar, A1
-            MOVE.B      #14, D0
+            MOVE.B      #14,D0
             TRAP        #15
             
             BRA         startingPrompt
+         
+endGreater:
+            LEA         endG,A1
+            MOVE.B      #14,D0
+            TRAP        #15
             
-            
+            BRA         startingPrompt
+    
 ;-----------------------------------------------------------
 ;MESSAGES
 ;-----------------------------------------------------------
@@ -248,12 +263,13 @@ userEA      DC.B        'Please enter your ending hex address (Only uppercase le
 ;-----------------------------------------------------------
 ;ERRORS
 ;-----------------------------------------------------------
-toobig      DC.B        'ERROR: The address is too big',CR,LF,0
 invalCh     DC.B        'ERROR: Invalid Characters used',CR,LF,0
 odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
 manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the address',CR,LF,0
+endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
 
-
+ending:
+            END         MAIN 
 
 *-----------------------------------------------------------
 * OpCode Implementation
@@ -262,7 +278,6 @@ manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the addres
 * Addressing Mode Implementation
 *-----------------------------------------------------------
 
-    END    MAIN 
 
 
 *~Font name~Courier New~
