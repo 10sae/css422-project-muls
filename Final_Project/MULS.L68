@@ -1,6 +1,6 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/3/2021 5:04:03 PM
+Created On: 5/7/2021 6:18:07 PM
 
 00000000                             1  *-----------------------------------------------------------
 00000000                             2  * Title      : Final Project
@@ -223,86 +223,196 @@ Created On: 5/3/2021 5:04:03 PM
 00001114  4286                     219              CLR.L       D6
 00001116  4287                     220              CLR.L       D7
 00001118                           221              
-00001118  6000 01D6                222              BRA         ending    
-0000111C                           223  
-0000111C                           224  charError:
-0000111C                           225              
-0000111C  43F9 00001222            226              LEA         invalCh,A1
-00001122  103C 000E                227              MOVE.B      #14,D0
-00001126  4E4F                     228              TRAP        #15
-00001128                           229              
-00001128  6000 FEEA                230              BRA         startingPrompt
-0000112C                           231            
-0000112C                           232  oddError:
-0000112C  43F9 00001243            233              LEA         odd,A1
-00001132  103C 000E                234              MOVE.B      #14,D0
-00001136  4E4F                     235              TRAP        #15
-00001138                           236              
-00001138  6000 FEDA                237              BRA         startingPrompt
-0000113C                           238              
-0000113C                           239  manyCharError:  
-0000113C  43F9 00001270            240              LEA         manyChar, A1
-00001142  103C 000E                241              MOVE.B      #14,D0
-00001146  4E4F                     242              TRAP        #15
-00001148                           243              
-00001148  6000 FECA                244              BRA         startingPrompt
-0000114C                           245           
-0000114C                           246  endGreater:
-0000114C  43F9 000012AB            247              LEA         endG,A1
-00001152  103C 000E                248              MOVE.B      #14,D0
-00001156  4E4F                     249              TRAP        #15
-00001158                           250              
-00001158  6000 FEBA                251              BRA         startingPrompt
-0000115C                           252      
-0000115C                           253  ;-----------------------------------------------------------
-0000115C                           254  ;MESSAGES
-0000115C                           255  ;-----------------------------------------------------------
-0000115C= 57 65 6C 63 6F 6D ...    256  Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
-00001180= 50 6C 65 61 73 65 ...    257  userSA      DC.B        'Please enter your starting hex address (Only uppercase letters)',CR,LF,0
-000011C2= 50 6C 65 61 73 65 ...    258  userEA      DC.B        'Please enter your ending hex address (Only uppercase letters)',CR,LF,0
-00001202                           259  
-00001202                           260  ;-----------------------------------------------------------
-00001202                           261  ;ERRORS
-00001202                           262  ;-----------------------------------------------------------
-00001202= 45 52 52 4F 52 3A ...    263  toobig      DC.B        'ERROR: The address is too big',CR,LF,0
-00001222= 45 52 52 4F 52 3A ...    264  invalCh     DC.B        'ERROR: Invalid Characters used',CR,LF,0
-00001243= 45 52 52 4F 52 3A ...    265  odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
-00001270= 45 52 52 4F 52 3A ...    266  manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the address',CR,LF,0
-000012AB= 45 52 52 4F 52 3A ...    267  endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
-000012F0                           268  
-000012F0                           269  ending:
-000012F0                           270              END         MAIN 
+00001118  6000 01B6                222              BRA         ending    
+0000111C                           223              
+0000111C                           224              
+0000111C                           225  LOOP:       ;This is going to help us go through each address, and see what the contents are inside it
+0000111C                           226  
+0000111C                           227              
+0000111C                           228              ;staHex = 1, ednHex = F
+0000111C                           229              ;for(int i = start; i < end; i++)
+0000111C                           230              ;{
+0000111C                           231              ;       load the first 16 bits into a  temp register (4 hex values)
+0000111C                           232              ;       
+0000111C                           233              ;       check for the first 4 left-most bits
+0000111C                           234              ;       compare the bits to their corresponding values
+0000111C                           235              ;       if hit{
+0000111C                           236              ;           00 == MOVE
+0000111C                           237              ;           0100 == MOVEM,NOP,LEA,NOT,JSR,RTS
+0000111C                           238              ;           0110 == BRA,BLT,BGE,BEQ
+0000111C                           239              ;           1000 == DIVU
+0000111C                           240              ;           1001 == SUB
+0000111C                           241              ;           1100 == MULS,AND,LSL,LSR,ASL,ASR
+0000111C                           242              ;           1101 == ADD
+0000111C                           243              ;       }
+0000111C                           244              ;       else, display the whole value inside the address, Ex. "INVALID OPCODE d: ABCD"  
+0000111C                           245              ;    
+0000111C                           246              ;}
+0000111C                           247  
+0000111C                           248  
+0000111C                           249  *-----------------------------------------------------------
+0000111C                           250  * OpCode Implementation
+0000111C                           251  ;
+0000111C                           252  *-----------------------------------------------------------
+0000111C                           253  
+0000111C                           254  ;MOVE
+Line 255 ERROR: Illegal symbol
+0000111C                           255  00:
+0000111C                           256  
+0000111C                           257  ;MOVEM,LEA,NOT,JSR
+Line 258 ERROR: Illegal symbol
+0000111C                           258  0100:        
+0000111C                           259              ;First check to see if either RTS or NOP
+0000111C                           260              ;Directly compare the hex with the bin # of NOP and RTS
+0000111C                           261              ;
+0000111C                           262              ;Else, it might be another opcode
+0000111C                           263              ;
+0000111C                           264              
+0000111C                           265  MOVEM:
+0000111C                           266  LEA:
+0000111C                           267  NOT:
+0000111C                           268  JSR:
+0000111C                           269     
+0000111C                           270  
+0000111C                           271  ;BRA,BLT,BGE,BEQ         
+Line 272 ERROR: Illegal symbol
+0000111C                           272  0110:
+0000111C                           273              ;
+0000111C                           274  BRA
+0000111C                           275  BLT
+0000111C                           276  BGE
+0000111C                           277  BEQ            
+0000111C                           278              
+0000111C                           279  ;DIVU            
+Line 280 ERROR: Illegal symbol
+0000111C                           280  1000:
+0000111C                           281  
+0000111C                           282  ;SUB
+Line 283 ERROR: Illegal symbol
+0000111C                           283  1001:
+0000111C                           284  
+0000111C                           285  ;MULS,AND,LSL,LSR,ASL,ASR
+Line 286 ERROR: Illegal symbol
+0000111C                           286  1100:
+0000111C                           287  
+0000111C                           288  MULS
+0000111C                           289  AND
+0000111C                           290  LSL
+0000111C                           291  LSR
+0000111C                           292  ASL
+0000111C                           293  ASR
+0000111C                           294  
+0000111C                           295  ;ADD
+Line 296 ERROR: Illegal symbol
+0000111C                           296  1101:
+0000111C                           297  
+0000111C                           298  *-----------------------------------------------------------
+0000111C                           299  * Addressing Mode Implementation
+0000111C                           300  *-----------------------------------------------------------
+0000111C                           301  
+0000111C                           302  
+0000111C                           303  
+0000111C                           304  ;-----------------------------------------------------------
+0000111C                           305  ;ERROR MESSAGES
+0000111C                           306  ;-----------------------------------------------------------
+0000111C                           307  charError:
+0000111C                           308              
+0000111C  43F9 00001202            309              LEA         invalCh,A1
+00001122  103C 000E                310              MOVE.B      #14,D0
+00001126  4E4F                     311              TRAP        #15
+00001128                           312              
+00001128  6000 FEEA                313              BRA         startingPrompt
+0000112C                           314            
+0000112C                           315  oddError:
+0000112C  43F9 00001223            316              LEA         odd,A1
+00001132  103C 000E                317              MOVE.B      #14,D0
+00001136  4E4F                     318              TRAP        #15
+00001138                           319              
+00001138  6000 FEDA                320              BRA         startingPrompt
+0000113C                           321              
+0000113C                           322  manyCharError:  
+0000113C  43F9 00001250            323              LEA         manyChar, A1
+00001142  103C 000E                324              MOVE.B      #14,D0
+00001146  4E4F                     325              TRAP        #15
+00001148                           326              
+00001148  6000 FECA                327              BRA         startingPrompt
+0000114C                           328           
+0000114C                           329  endGreater:
+0000114C  43F9 0000128B            330              LEA         endG,A1
+00001152  103C 000E                331              MOVE.B      #14,D0
+00001156  4E4F                     332              TRAP        #15
+00001158                           333              
+00001158  6000 FEBA                334              BRA         startingPrompt
+0000115C                           335      
+0000115C                           336  ;-----------------------------------------------------------
+0000115C                           337  ;MESSAGES
+0000115C                           338  ;-----------------------------------------------------------
+0000115C= 57 65 6C 63 6F 6D ...    339  Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
+00001180= 50 6C 65 61 73 65 ...    340  userSA      DC.B        'Please enter your starting hex address (Only uppercase letters)',CR,LF,0
+000011C2= 50 6C 65 61 73 65 ...    341  userEA      DC.B        'Please enter your ending hex address (Only uppercase letters)',CR,LF,0
+00001202                           342  
+00001202                           343  ;-----------------------------------------------------------
+00001202                           344  ;ERRORS
+00001202                           345  ;-----------------------------------------------------------
+00001202= 45 52 52 4F 52 3A ...    346  invalCh     DC.B        'ERROR: Invalid Characters used',CR,LF,0
+00001223= 45 52 52 4F 52 3A ...    347  odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
+00001250= 45 52 52 4F 52 3A ...    348  manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the address',CR,LF,0
+0000128B= 45 52 52 4F 52 3A ...    349  endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
+000012D0                           350  
+000012D0                           351  ending:
+000012D0                           352              END         MAIN 
 
-No errors detected
+7 errors detected
 No warnings generated
 
 
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
+AND                 111C
+ASL                 111C
+ASR                 111C
+BEQ                 111C
+BGE                 111C
+BLT                 111C
+BRA                 111C
 CHARERROR           111C
 CONVERT             1068
 CR                  D
-ENDG                12AB
+ENDG                128B
 ENDGREATER          114C
 ENDHEX              1004
-ENDING              12F0
+ENDING              12D0
 ENDINGPROMPT        1040
-INVALCH             1222
+INVALCH             1202
+JSR                 111C
+LEA                 111C
 LETTER              108C
 LF                  A
+LOOP                111C
+LSL                 111C
+LSR                 111C
 MAIN                1000
-MANYCHAR            1270
+MANYCHAR            1250
 MANYCHARERROR       113C
 MORECHECKS          10BC
 MORECHECKS1         10C8
 MORECHECKS2         10EA
+MOVEM               111C
+MULS                111C
+NOT                 111C
 NUMBER              10A0
-ODD                 1243
+ODD                 1223
 ODDERROR            112C
 STAHEX              1000
 STARTINGPROMPT      1014
-TOOBIG              1202
 USEREA              11C2
 USERSA              1180
 WELCOME             115C
+00                  32EBFF4
+0100                32EBFF4
+0110                32EBFF4
+1000                32EBFF4
+1001                32EBFF4
+1100                32EBFF4
+1101                32EBFF4

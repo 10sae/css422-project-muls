@@ -220,6 +220,87 @@ moreChecks2:
             CLR.L       D7
             
             BRA         ending    
+            
+            
+LOOP:       ;This is going to help us go through each address, and see what the contents are inside it
+
+            
+            
+            ;staHex = 1, ednHex = F
+            ;for(int i = start; i < end; i++)
+            ;{
+            ;       load the first 16 bits into a  temp register (4 hex values)
+            ;       
+            ;       check for the first 4 left-most bits
+            ;       compare the bits to their corresponding values
+            ;       if hit{
+            ;           00 == MOVE
+            ;           0100 == MOVEM,NOP,LEA,NOT,JSR,RTS
+            ;           0110 == BRA,BLT,BGE,BEQ
+            ;           1000 == DIVU
+            ;           1001 == SUB
+            ;           1100 == MULS,AND,LSL,LSR,ASL,ASR
+            ;           1101 == ADD
+            ;       }
+            ;       else, display the whole value inside the address, Ex. "INVALID OPCODE d: ABCD"  
+            ;    
+            ;}
+
+
+*-----------------------------------------------------------
+* OpCode Implementation
+;
+*-----------------------------------------------------------
+
+;MOVE
+00:
+
+;MOVEM,LEA,NOT,JSR
+0100:        
+            ;First check to see if either RTS or NOP
+            ;Directly compare the hex with the bin # of NOP and RTS
+            ;
+            ;Else, it might be another opcode
+            ;
+            
+MOVEM:
+LEA:
+NOT:
+JSR:
+   
+
+;BRA,BLT,BGE,BEQ         
+0110:
+            ;
+BRA:
+BLT:
+BGE:
+BEQ:            
+            
+;DIVU            
+1000:
+
+;SUB
+1001:
+
+;MULS,AND,LSL,LSR,ASL,ASR
+1100:
+
+MULS:
+AND:
+LSL:
+LSR:
+ASL:
+ASR:
+
+;ADD
+1101:
+
+*-----------------------------------------------------------
+* Addressing Mode Implementation
+*-----------------------------------------------------------
+
+
 
 ;-----------------------------------------------------------
 ;ERROR MESSAGES
@@ -271,12 +352,6 @@ endG        DC.B        'ERROR: The ending address cannot be less than the start
 ending:
             END         MAIN 
 
-*-----------------------------------------------------------
-* OpCode Implementation
-*-----------------------------------------------------------
-*-----------------------------------------------------------
-* Addressing Mode Implementation
-*-----------------------------------------------------------
 
 
 
