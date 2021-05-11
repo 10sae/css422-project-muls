@@ -26,6 +26,9 @@ endHex:     DC.L        $0
             LEA         Welcome,A1
             MOVE.B      #14,D0
             TRAP        #15
+            
+            MOVE.W      #%0100111001110001,$2000 
+            MOVE.W      #%0100111001110101,$2002           
   
 startingPrompt:
             ;Ask the user for the starting hex
@@ -217,25 +220,108 @@ moreChecks2:
             CLR.L       D3
             CLR.L       D5
             CLR.L       D6
-            CLR.L       D7
+            CLR.L       D7  
             
-            BRA         ending    
+            ;Copy the value of our starting hex to A2 (temp register)
+            MOVEA.L     staHex,A2
+                        
+            
+LOOP:   
+            ;--------------------------------------------------------
+            ;Check for NOP or RTS
+            ;--------------------------------------------------------
+            ;Move the NOP binary value for comparing
+            MOVE.L      #%0100111001110001,D2
+            
+            ;Check and see i the instruction is NOP
+            CMP.W       (A2),D2
+            BEQ         printN
+            
+            ;Move the RTS binary value for comparing
+            MOVE.L      #%0100111001110101,D2
+            
+            ;Check and see if the instruction is RTS
+            CMP.W       (A2),D2
+            BEQ         printR
+            
+            ;Clear the contents for reusing
+            CLR.L       D2
             
             
-LOOP:       ;This is going to help us go through each address, and see what the contents are inside it
-
+            ;--------------------------------------------------------
+            ;Check for MOVE, since it's the only word starting with 00
+            ;--------------------------------------------------------            
+            ;Move the value in A2 to a temp register
+            MOVE.B      (A2),D2
+            
+            ;Shift 6 bits to the right to isolate the left-most digits
+            LSR.L       #6,D2
+            
+            ;If the first two bits (left-most) are 00, then the instruction is MOVE
+            CMP.B       #00,D2
+            BLE         M00
+            
+            ;Reuse the register
+            CLR.L       D2
             
             
-            ;staHex = 1, ednHex = F
-            ;for(int i = start; i < end; i++)
-            ;{
+            ;--------------------------------------------------------
+            ;Check for other OpCodes
+            ;--------------------------------------------------------
+            ;Move the word into a temp register 
+            MOVE.W      (A2),D2
+            
+            ;Since LSR can only take 0-9, we can use a data register
+            MOVE.B      #12,D3
+            ;Shift 12 bits to isolate the left-most digits
+            LSR.L       D3,D2
+            
+            
+            ;USE Data Registers D4-D7
+            ;3 bits of M = D4
+            ;Orange Xn bits = D5
+            ;Size = D6
+            ;Direction = D7 *If you want to use since it's only 1 or 0
+            
+            ;If you do use registers, try to clear and test as you go!
+            
+            
+            
+            
+            ;MOVEM,LEA,NOT,JSR
+            CMP.W       #%0100,D2
+            BEQ         M0100
+            
+            ;BRA,BLT,BGE,BEQ
+            CMP.W       #%0110,D2
+            BEQ         M0110
+            
+            ;DIVU
+            CMP.W       #%1000,D2
+            BEQ         M1000
+            
+            ;SUB
+            CMP.W       #%1001,D2
+            BEQ         M1001
+            
+            ;MULS,AND,LSL,LSR,ASL,ASR
+            CMP.W       #%1100,D2
+            BEQ         M1100
+            
+            ;ADD
+            CMP.W       #%1101,D2
+            BEQ         M1101
+            
+            BRA         ending
+            
+           
             ;       load the first 16 bits into a  temp register (4 hex values)
             ;       
             ;       check for the first 4 left-most bits
             ;       compare the bits to their corresponding values
             ;       if hit{
             ;           00 == MOVE
-            ;           0100 == MOVEM,NOP,LEA,NOT,JSR,RTS
+            ;           0100 == MOVEM,LEA,NOT,JSR
             ;           0110 == BRA,BLT,BGE,BEQ
             ;           1000 == DIVU
             ;           1001 == SUB
@@ -244,8 +330,18 @@ LOOP:       ;This is going to help us go through each address, and see what the 
             ;       }
             ;       else, display the whole value inside the address, Ex. "INVALID OPCODE d: ABCD"  
             ;    
-            ;}
+            ;
 
+update:
+            ;Check and see if we are at the ending hex
+            CMP.L      endHex,A2
+            BEQ        ending
+
+            ;Update address in A2
+            ADD.L      #2,A2
+            
+            
+            BRA        LOOP
 
 *-----------------------------------------------------------
 * OpCode Implementation
@@ -253,10 +349,16 @@ LOOP:       ;This is going to help us go through each address, and see what the 
 *-----------------------------------------------------------
 
 ;MOVE
-00:
+M00:
+            LEA        printMOVE,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            BRA        update
+          
 
 ;MOVEM,LEA,NOT,JSR
-0100:        
+M0100:        
             ;First check to see if either RTS or NOP
             ;Directly compare the hex with the bin # of NOP and RTS
             ;
@@ -264,44 +366,59 @@ LOOP:       ;This is going to help us go through each address, and see what the 
             ;
             
 MOVEM:
-LEA:
-NOT:
-JSR:
+MLEA:
+MNOT:
+MJSR:
    
 
 ;BRA,BLT,BGE,BEQ         
-0110:
+M0110:
             ;
-BRA:
-BLT:
-BGE:
-BEQ:            
+MBRA:
+MBLT:
+MBGE:
+MBEQ:            
             
 ;DIVU            
-1000:
+M1000:
 
 ;SUB
-1001:
+M1001:
 
 ;MULS,AND,LSL,LSR,ASL,ASR
-1100:
+M1100:
 
-MULS:
-AND:
-LSL:
-LSR:
-ASL:
-ASR:
+MMULS:
+MAND:
+MLSL:
+MLSR:
+MASL:
+MASR:
 
 ;ADD
-1101:
+M1101:
 
 *-----------------------------------------------------------
 * Addressing Mode Implementation
 *-----------------------------------------------------------
 
 
+*-----------------------------------------------------------
+* Print Instructions
+*-----------------------------------------------------------
+printN:
+            LEA        printNOP,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            BRA        update
 
+printR:
+            LEA        printRTS,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            BRA        update
 ;-----------------------------------------------------------
 ;ERROR MESSAGES
 ;-----------------------------------------------------------
@@ -341,6 +458,12 @@ Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
 userSA      DC.B        'Please enter your starting hex address (Only uppercase letters)',CR,LF,0
 userEA      DC.B        'Please enter your ending hex address (Only uppercase letters)',CR,LF,0
 
+printNOP    DC.B        'NOP',CR,LF,0
+printRTS    DC.B        'RTS',CR,LF,0
+printMOVE   DC.B        'MOVE',CR,LF,0
+
+theEnd      DC.B        CR,LF,'You are now ending the program',0
+
 ;-----------------------------------------------------------
 ;ERRORS
 ;-----------------------------------------------------------
@@ -350,7 +473,12 @@ manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the addres
 endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
 
 ending:
+            LEA         theEnd,A1
+            MOVE        #14,D0
+            TRAP        #15
+            
             END         MAIN 
+
 
 
 
