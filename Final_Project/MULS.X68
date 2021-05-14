@@ -26,15 +26,16 @@ endHex:     DC.L        $0
             LEA         Welcome,A1
             MOVE.B      #14,D0
             TRAP        #15
-            
-            MOVE.W      #%0100111001110001,$2000 
-            MOVE.W      #%0100111001110101,$2002           
+                   
   
 startingPrompt:
             ;Ask the user for the starting hex
             LEA         userSA,A1
             MOVE.B      #14,D0
             TRAP        #15
+            
+            ADD.W       D3,D2
+            
             
             ;Clear the registers in case we had an error
             MOVE.L      #0,A1
@@ -275,63 +276,41 @@ LOOP:
             MOVE.B      #12,D3
             ;Shift 12 bits to isolate the left-most digits
             LSR.L       D3,D2
-            
-            
-            ;USE Data Registers D4-D7
-            ;3 bits of M = D4
-            ;Orange Xn bits = D5
-            ;Size = D6
-            ;Direction = D7 *If you want to use since it's only 1 or 0
-            
-            ;If you do use registers, try to clear and test as you go!
-            
-            
-            
+                      
+
             
             ;MOVEM,LEA,NOT,JSR
-            CMP.W       #%0100,D2
+            CMP.B       #%0100,D2
             BEQ         M0100
             
             ;BRA,BLT,BGE,BEQ
-            CMP.W       #%0110,D2
+            CMP.B       #%0110,D2
             BEQ         M0110
             
             ;DIVU
-            CMP.W       #%1000,D2
+            CMP.B       #%1000,D2
             BEQ         M1000
             
             ;SUB
-            CMP.W       #%1001,D2
+            CMP.B       #%1001,D2
             BEQ         M1001
             
             ;MULS,AND,LSL,LSR,ASL,ASR
-            CMP.W       #%1100,D2
+            CMP.B       #%1100,D2
             BEQ         M1100
             
             ;ADD
-            CMP.W       #%1101,D2
+            CMP.B       #%1101,D2
             BEQ         M1101
             
             BRA         ending
             
-           
-            ;       load the first 16 bits into a  temp register (4 hex values)
-            ;       
-            ;       check for the first 4 left-most bits
-            ;       compare the bits to their corresponding values
-            ;       if hit{
-            ;           00 == MOVE
-            ;           0100 == MOVEM,LEA,NOT,JSR
-            ;           0110 == BRA,BLT,BGE,BEQ
-            ;           1000 == DIVU
-            ;           1001 == SUB
-            ;           1100 == MULS,AND,LSL,LSR,ASL,ASR
-            ;           1101 == ADD
-            ;       }
-            ;       else, display the whole value inside the address, Ex. "INVALID OPCODE d: ABCD"  
-            ;    
-            ;
+            
+            
+            ;display INVALID OPCODE, and display the raw hex
+            ;do this later
 
+           
 update:
             ;Check and see if we are at the ending hex
             CMP.L      endHex,A2
@@ -354,17 +333,16 @@ M00:
             MOVE.B     #14,D0
             TRAP       #15
             
+            CLR.B      D2
+            CLR.B      D3
+            
+            
             BRA        update
           
 
 ;MOVEM,LEA,NOT,JSR
 M0100:        
-            ;First check to see if either RTS or NOP
-            ;Directly compare the hex with the bin # of NOP and RTS
-            ;
-            ;Else, it might be another opcode
-            ;
-            
+                 
 MOVEM:
 MLEA:
 MNOT:
@@ -384,6 +362,42 @@ M1000:
 
 ;SUB
 M1001:
+            LEA        printSUB,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            CLR.B      D2
+            CLR.B      D3
+            
+            ;Copy the address values into a register
+            MOVE.L     (A2),D2
+            
+            
+            ;Shift 8 bits left
+            LSL.L      #8,D2
+            ;Shift 14 bits right to isolate the size (2 bits)
+            LSR.L      #2,D2
+            
+            ;Compare to which size is being moved for the opcode
+            CMP.B      #00,D2
+            BEQ        PByte
+            
+            CMP.B      #01,D2
+            BEQ        PWord
+            
+            CMP.B      #10,D2
+            BEQ        PLong
+            
+            
+            ;Isolate bits 5,6,7 to get the source 
+            
+            ;Isolate bits 11,12,13 to get the addressing mode
+            
+            ;Isoalte bits 14,15,16 to get the destination
+            
+            ;00 B, 01 W, 10 L
+            
+            BRA        update
 
 ;MULS,AND,LSL,LSR,ASL,ASR
 M1100:
@@ -397,10 +411,91 @@ MASR:
 
 ;ADD
 M1101:
+            LEA        printADD,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            CLR.B      D2
+            CLR.B      D3
+            
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;1101 0100 00    00 0011
+            ;0000 0011 0000 0000
+            
+            ;0000 0000 0000 0011 
+            
+            ;Shift 8 bits left
+            LSL.L      #8,D2
+            ;Shift 14 bits right to isolate the size (2 bits)
+            MOVE.B     #14,D3
+            LSR.W      D3,D2
+            
+            ;Compare to which size is being moved for the opcode
+            CMP.B      #00,D2
+            BEQ        PByte
+            
+            CMP.B      #01,D2
+            BEQ        PWord
+            
+            CMP.B      #10,D2
+            BEQ        PLong
+            
+            
+            ;Isolate bits 5,6,7 to get the source 
+            
+            ;Isolate bits 11,12,13 to get the addressing mode
+            
+            ;Isoalte bits 14,15,16 to get the destination
+            
+            ;00 B, 01 W, 10 L
 
+            
+            
+            BRA        update
+            
+            
+*-----------------------------------------------------------
+* Print Sizes
+*-----------------------------------------------------------           
+PByte:
+            LEA        printSIZEB,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            RTS
+PWord:
+            LEA        printSIZEW,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            RTS
+PLong:            
+            LEA        printSIZEB,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            RTS
 *-----------------------------------------------------------
 * Addressing Mode Implementation
 *-----------------------------------------------------------
+DRD:
+            ;Print D __
+ARD:
+            ;Print A __
+ARI:
+            ;Print (A __ )
+IA:
+            ;Print #$ ______
+PI:
+            ;Print (A __)+
+PD:
+            ;Print -(A __)
+ALA:
+            ;Print $-------- (8 digits)
+AWA:
+            ;Print $---- (4 digits)
 
 
 *-----------------------------------------------------------
@@ -460,7 +555,23 @@ userEA      DC.B        'Please enter your ending hex address (Only uppercase le
 
 printNOP    DC.B        'NOP',CR,LF,0
 printRTS    DC.B        'RTS',CR,LF,0
-printMOVE   DC.B        'MOVE',CR,LF,0
+printMOVE   DC.B        'MOVE',0
+printADD    DC.B        'ADD',0
+printSUB    DC.B        'SUB',0
+
+printSIZEB   DC.B        '.B ',0
+printSIZEW   DC.W        '.W ',0
+printSIZEL   DC.L        '.L ',0
+
+
+printDRD      DC.B        'D',0
+printARD      DC.B        'A',0
+printARI      DC.B        '(A',0
+printIA       DC.B        '#',0
+printPI       DC.B        '(A',0
+printPD       DC.B        '-(A',0
+;printAA       DC.B        ''   /TBD
+
 
 theEnd      DC.B        CR,LF,'You are now ending the program',0
 
@@ -478,6 +589,7 @@ ending:
             TRAP        #15
             
             END         MAIN 
+
 
 
 
