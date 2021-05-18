@@ -32,7 +32,7 @@ endHex:     DC.L        $0
             NOT.B    D0
             
 startingPrompt:
-            ;Ask the user for the starting hex
+            ;Ask the user for the starting hex3
             LEA         userSA,A1
             MOVE.B      #14,D0
             TRAP        #15        
@@ -356,10 +356,12 @@ getBits:
 
 *-----------------------------------------------------------
 * OpCode Implementation
-;
 *-----------------------------------------------------------
 
-;MOVE
+
+*-----------------------------------------------------------
+* MOVE INSTRUCTION
+*-----------------------------------------------------------
 M00:
             LEA        printMOVE,A1
             MOVE.B     #14,D0
@@ -368,15 +370,48 @@ M00:
             CLR.B      D2
             CLR.B      D3
             
+            ;======Isolate Size (S) Bits=======
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating size bits 12,13
+            MOVE.B      #13,D3             
+            MOVE.B      #2,D4             
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
+            
+            ;Jumps to printSizeSubroutine and returns after size has been printed
+            BSR         printSizeSubroutine
+            
+            ;Clear the register so we can reuse it
+            CLR.L       D2
+            
+            MOVE.B      (A2),D2
+
+            
+            ;Get bits 11-6 for the source
+            ;First we must figure out the register that is being used
+            ;Then find the addressing mode
+            
+            ;Get bits 0-15 for the destination
+            ;This uses the same procedure from previous opcodes
+            ;First find the addressing mode
+            ;Then find the register that is being used
             
             BRA        update
           
 
-;MOVEM,LEA,NOT,JSR
+*-----------------------------------------------------------
+* MOVEM,LEA,NOT,JSR INSTRUCTIONS
+*-----------------------------------------------------------
 M0100:      
             CLR.L       D2
             CLR.L       D3
             
+            ;--------------------------------------------------------
+            ;Check for LEA
+            ;--------------------------------------------------------
             ;Copy the address values into a register to check for LEA
             MOVE.W     (A2),D2
             
@@ -390,11 +425,14 @@ M0100:
             CMP.B       #%111,D2
             BEQ         MLEA
 
+            ;--------------------------------------------------------
+            ;Check for NOT
+            ;--------------------------------------------------------
             ;Clear D2 and recopy it to check for NOT
             CLR.L       D2
             MOVE.W      (A2),D2
             
-            ;Pass in parameters for isolating bits 11,10,9,8
+            ;Pass in parameters for isolating bits 8,9,10,11
             MOVE.B      #8,D3
             MOVE.B      #4,D4
             
@@ -404,8 +442,40 @@ M0100:
             CMP.B       #%0110,D2
             BEQ         MNOT      
             
-            ;Check for MOVEM and JSR later
-            ;-----------------------------
+            ;--------------------------------------------------------
+            ;Check for JSR
+            ;--------------------------------------------------------
+            ;Clear D2 and recopy it to check for JSR
+            CLR.L       D2
+            MOVE.W     (A2),D2
+            
+            ;Pass in parameters for isolating bits 6-11
+            MOVE.B      #6,D3
+            MOVE.B      #6,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+            
+            CMP.B       #%111010,D2
+            BEQ         MJSR
+            
+            ;--------------------------------------------------------
+            ;Check for MOVEM
+            ;--------------------------------------------------------
+            ;Clear D2 and recopy it to check for MOVEM
+            CLR.L       D2
+            MOVE.W     (A2),D2
+            
+            ;Pass in parameters for isolating bit 9
+            MOVE.B      #9,D3
+            MOVE.B      #1,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+            
+            CMP.B       #%0,D2
+            BEQ         MOVEM
+            
        
 MOVEM:
 
@@ -446,7 +516,6 @@ MNOT:
             MOVE.B     #14,D0
             TRAP       #15
             
-            ;We want 7-6
             CLR.L      D2
             ;Move the address into the register to check for size
             MOVE.W     (A2),D2
@@ -464,17 +533,32 @@ MNOT:
             ;*SOURCE*
             ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
             ;D6 will contain mode & D7 will contain the register after this instruction
-            BSR         isolateAddressBit0to5
+            BSR        isolateAddressBit0to5
             
             ;*Print source address*
-            BSR         addressModeSR
+            BSR        addressModeSR
             
             BRA        update 
 
 MJSR:
-   
+            LEA        printJSR,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            ;*SOURCE*
+            ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
+            ;D6 will contain mode & D7 will contain the register after this instruction
+            BSR        isolateAddressBit0to5
+            
+            ;*Print source address*
+            BSR        addressModeSR
+            
+            BRA        update 
+            
 
-;BRA,BLT,BGE,BEQ         
+*-----------------------------------------------------------
+* BRA,BLT,BGE,BEQ INSTRUCTIONS
+*-----------------------------------------------------------       
 M0110:
             ;
 MBRA:
@@ -482,7 +566,10 @@ MBLT:
 MBGE:
 MBEQ:            
             
-;DIVU            
+
+*-----------------------------------------------------------
+* DIVU INSTRUCTION
+*-----------------------------------------------------------           
 M1000:
             
             CLR.L       D2
@@ -513,8 +600,9 @@ continueDIVU:
             BRA         dnDest
             
             
-
-;SUB
+*-----------------------------------------------------------
+* SUB INSTRUCTION
+*-----------------------------------------------------------  
 M1001:
             LEA        printSUB,A1
             MOVE.B     #14,D0
@@ -558,19 +646,9 @@ M1001:
             BRA         dnSource
 
 
-;===================OLD VERSION====================
-;;MULS,AND,LSL,LSR,ASL,ASR
-;M1100:
-
-;MMULS:
-;MAND:
-;MLSL:
-;MLSR:
-;MASL:
-;MASR:
-;==================================================
-
-;MULS,AND
+*-----------------------------------------------------------
+* MULS,AND INSTRUCTIONS
+*-----------------------------------------------------------  
 M1100:      
             CLR.L       D2
             CLR.L       D3
@@ -650,10 +728,9 @@ MAND:
             BRA         update          ;Unnecessary with current implementation. dnDest & dnSource will call it instead
    
    
-*-----------------------------------------------------------------------
-*-----------------------------------------------------------------------
-*-----------------------------------------------------------------------
-;LSL,LSR,ASL,ASR
+*-----------------------------------------------------------
+* LSL,LSR,ASL,ASR INSTRUCTIONS
+*-----------------------------------------------------------  
 M1110:
 
 MLSL:
@@ -888,6 +965,7 @@ sError:
             TRAP       #15
             
             BRA        update
+            
 *-----------------------------------------------------------
 * Addressing Mode Implementation
 *-----------------------------------------------------------
@@ -897,18 +975,23 @@ addressModeSR:
             ;D6 = mode
             ;D7 = register
 
+            ;Data register direct
             CMP.B       #%000,D6
             BEQ         DRD
             
+            ;Address register direct
             CMP.B       #%001,D6
             BEQ         ARD
             
+            ;Address register indirect
             CMP.B       #%010,D6
             BEQ         ARI
             
+            ;Post Increment
             CMP.B       #%011,D6
             BEQ         PI
             
+            ;Pre Decrement
             CMP.B       #%100,D6
             BEQ         PD
 DRD:
@@ -998,7 +1081,7 @@ AWA:
 
 
 *-----------------------------------------------------------
-* Print Instructions
+* Print Instructions for NOP and RTS
 *-----------------------------------------------------------
 printN:
             LEA        printNOP,A1
@@ -1052,24 +1135,40 @@ Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
 userSA      DC.B        'Please enter your starting hex address (Only uppercase letters)',CR,LF,0
 userEA      DC.B        'Please enter your ending hex address (Only uppercase letters)',CR,LF,0
 
+;-----------------------------------------------------------
+;OPCODE Messages
+;-----------------------------------------------------------
 printNOP    DC.B        CR,LF,'NOP',0
-printRTS    DC.B        CR,LF,'RTS',0
 printMOVE   DC.B        CR,LF,'MOVE',0
+printMOVEM  DC.B        CR,LF,'MOVEM',0
 printADD    DC.B        CR,LF,'ADD',0
 printSUB    DC.B        CR,LF,'SUB',0
-printAND    DC.B        CR,LF,'AND',0
 printMULS   DC.B        CR,LF,'MULS.W ',0
 printDIVU   DC.B        CR,LF,'DIVU.W ',0
 printLEA    DC.B        CR,LF,'LEA ',0
+printAND    DC.B        CR,LF,'AND',0
 printNOT    DC.B        CR,LF,'NOT',0
+printLSL    DC.B        CR,LF,'LSL',0
+printLSR    DC.B        CR,LF,'LSR',0
+printASL    DC.B        CR,LF,'ASL',0
+printASR    DC.B        CR,LF,'ASR',0
+printBLT    DC.B        CR,LF,'BLT',0
+printBGE    DC.B        CR,LF,'BGE',0
+printBEQ    DC.B        CR,LF,'BEQ',0
+printJSR    DC.B        CR,LF,'JSR',0
+printRTS    DC.B        CR,LF,'RTS',0
+printBRA    DC.B        CR,LF,'BRA',0
 
-
-
+;-----------------------------------------------------------
+;Size Messages
+;-----------------------------------------------------------
 printSIZEB   DC.B        '.B ',0
 printSIZEW   DC.W        '.W ',0
 printSIZEL   DC.L        '.L ',0
 
-
+;-----------------------------------------------------------
+;Addressing Mode Messages
+;-----------------------------------------------------------
 printDRD      DC.B        'D',0
 printARD      DC.B        'A',0
 printARI      DC.B        '(A',0
@@ -1095,12 +1194,16 @@ manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the addres
 endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
 sizeError   DC.B        'ERROR: Invalid size instruction',0
 
+;-----------------------------------------------------------
+;Ending function that ends our program 
+;-----------------------------------------------------------
 ending:
             LEA         theEnd,A1
             MOVE        #14,D0
             TRAP        #15
             
             END         MAIN 
+
 
 
 
