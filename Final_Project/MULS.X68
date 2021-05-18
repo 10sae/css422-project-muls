@@ -27,15 +27,15 @@ endHex:     DC.L        $0
             MOVE.B      #14,D0
             TRAP        #15
                    
-  
+            ;===TESTING===
+            LEA (A3),A4
+            NOT.B    D0
+            
 startingPrompt:
             ;Ask the user for the starting hex
             LEA         userSA,A1
             MOVE.B      #14,D0
-            TRAP        #15
-            
-            ADD.W       D3,D2
-            
+            TRAP        #15        
             
             ;Clear the registers in case we had an error
             MOVE.L      #0,A1
@@ -231,6 +231,7 @@ LOOP:
             ;--------------------------------------------------------
             ;Check for NOP or RTS
             ;--------------------------------------------------------
+            
             ;Move the NOP binary value for comparing
             MOVE.L      #%0100111001110001,D2
             
@@ -272,11 +273,12 @@ LOOP:
             ;Move the word into a temp register 
             MOVE.W      (A2),D2
             
-            ;Since LSR can only take 0-9, we can use a data register
-            MOVE.B      #12,D3
-            ;Shift 12 bits to isolate the left-most digits
-            LSR.L       D3,D2
-                      
+            ;Passing in parameters for isolating the left most hand 4 bits of D2 using getBits
+            MOVE.B        #12,D3            ;Start bit index = 12
+            MOVE.B        #4,D4             ;Number of bits needed = 4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR           getBits            
 
             
             ;MOVEM,LEA,NOT,JSR
@@ -295,9 +297,13 @@ LOOP:
             CMP.B       #%1001,D2
             BEQ         M1001
             
-            ;MULS,AND,LSL,LSR,ASL,ASR
+            ;MULS,AND
             CMP.B       #%1100,D2
             BEQ         M1100
+            
+            ;LSL,LSR,ASL,ASR
+            CMP.B       #%1110,D2
+            BEQ         M1110
             
             ;ADD
             CMP.B       #%1101,D2
@@ -321,6 +327,32 @@ update:
             
             
             BRA        LOOP
+            
+            
+getBits:
+            ;GETS ___ MANY BITS STARTING FROM __ START BIT INDEX
+            ;PARAMETERS:
+            ;D2 = the value the bits are extracted from & saved back in
+            ;D3 = the start bit index (starting from 0)
+            ;D4 = the number of bits we want to extract
+            
+            ;Calculate left shift
+            MOVE.W      #16,D5
+            
+            ADD.W       D3,D4             ; start bit index + number of bits needed = X 
+            SUB.W       D4,D5             ; 16 - X = leftShift
+            
+            LSL.W       D5,D2
+            
+            
+            ;Calculate right shift
+            ADD.W       D3,D5             ; start bit + leftShift = X
+            LSR.W       D5,D2
+            
+            CLR.L       D3
+            CLR.L       D4
+            CLR.L       D5   
+            RTS
 
 *-----------------------------------------------------------
 * OpCode Implementation
@@ -341,11 +373,104 @@ M00:
           
 
 ;MOVEM,LEA,NOT,JSR
-M0100:        
-                 
+M0100:      
+            CLR.L       D2
+            CLR.L       D3
+            
+            ;Copy the address values into a register to check for LEA
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bits 6,7,8
+            MOVE.B      #6,D3             ;Start bit index = 6
+            MOVE.B      #3,D4             ;Number of bits needed = 3
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+
+            CMP.B       #%111,D2
+            BEQ         MLEA
+
+            ;Clear D2 and recopy it to check for NOT
+            CLR.L       D2
+            MOVE.W      (A2),D2
+            
+            ;Pass in parameters for isolating bits 11,10,9,8
+            MOVE.B      #8,D3
+            MOVE.B      #4,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+            
+            CMP.B       #%0110,D2
+            BEQ         MNOT      
+            
+            ;Check for MOVEM and JSR later
+            ;-----------------------------
+       
 MOVEM:
+
 MLEA:
+            LEA         printLEA,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;*SOURCE*
+            ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
+            ;D6 will contain mode & D7 will contain the register after this instruction
+            BSR         isolateAddressBit0to5
+            
+            ;*Print source address*
+            BSR         addressModeSR
+            
+            ;Print comma after source address
+            LEA         printComma,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;*DESTINATION*
+            ;Jumps to helper subroutine to isolates and return the register stored in bits 9 - 11
+            ;D7 will contain the register after this instruction
+            BSR         isolateRegisterBit9to11
+            
+            ;Save #%001 into D6 to specify address register mode
+            MOVE.B      #1,D6
+            
+            
+            ;*Print destination address*
+            BSR         addressModeSR
+
+            BRA        update
+
 MNOT:
+            LEA        printNOT,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            ;We want 7-6
+            CLR.L      D2
+            ;Move the address into the register to check for size
+            MOVE.W     (A2),D2
+            
+            ;Pass in parameters for isolating bits 6,7
+            MOVE.B     #6,D3
+            MOVE.B     #2,D4
+            
+            ;Jump to getbits and return with isolated bits
+            BSR        getbits          
+            
+            ;Jumps to printSizeSubroutine and returns after size has been printed
+            BSR        printSizeSubroutine
+            
+            ;*SOURCE*
+            ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
+            ;D6 will contain mode & D7 will contain the register after this instruction
+            BSR         isolateAddressBit0to5
+            
+            ;*Print source address*
+            BSR         addressModeSR
+            
+            BRA        update 
+
 MJSR:
    
 
@@ -359,6 +484,35 @@ MBEQ:
             
 ;DIVU            
 M1000:
+            
+            CLR.L       D2
+            CLR.L       D3
+            
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bits 6,7,8
+            MOVE.B      #6,D3             ;Start bit index = 6
+            MOVE.B      #3,D4             ;Number of bits needed = 3
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+            
+            ;If bits 6,7,8 are #%011, then it's DIVU. Otherwise, branch to error message
+            CMP.L       #%011,D2
+            BEQ         continueDIVU
+            
+            ;************TO DO: BRANCH TO ERROR MESSAGE IF NOT DIVU**************
+
+continueDIVU:
+
+            LEA         printDIVU,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            BRA         dnDest
+            
+            
 
 ;SUB
 M1001:
@@ -369,45 +523,149 @@ M1001:
             CLR.B      D2
             CLR.B      D3
             
+            ;======Isolate Size (S) Bits=======
             ;Copy the address values into a register
-            MOVE.L     (A2),D2
+            MOVE.W     (A2),D2
             
+            ;Passing in parameters for isolating size bits
+            MOVE.B      #6,D3             ;Start bit index = 6
+            MOVE.B      #2,D4             ;Number of bits needed = 2
             
-            ;Shift 8 bits left
-            LSL.L      #8,D2
-            ;Shift 14 bits right to isolate the size (2 bits)
-            LSR.L      #2,D2
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
             
-            ;Compare to which size is being moved for the opcode
-            CMP.B      #00,D2
-            BEQ        PByte
+            ;Jumps to printSizeSubroutine and returns after size has been printed
+            BSR         printSizeSubroutine
             
-            CMP.B      #01,D2
-            BEQ        PWord
+       
+            ;======Isolate direction (D) Bit=======
+            ; 0 = data register is destination | 1 = Dn is source
+            CLR.L       D2
             
-            CMP.B      #10,D2
-            BEQ        PLong
+            ;Copy the address values into a register
+            MOVE.W      (A2),D2
             
+            ;Passing in parameters for isolating direction bit
+            MOVE.B      #8,D3             ;Start bit index = 8
+            MOVE.B      #1,D4             ;Number of bits needed = 1
             
-            ;Isolate bits 5,6,7 to get the source 
+            ;Jumps to getBits and returns with isolated bit in D2
+            BSR         getBits
             
-            ;Isolate bits 11,12,13 to get the addressing mode
-            
-            ;Isoalte bits 14,15,16 to get the destination
-            
-            ;00 B, 01 W, 10 L
-            
-            BRA        update
+            ;Uses direction bit to see if Dn is the destination. Important because it determines the order in which we isolate and print the addressing bits.
+            CMP.B       #0,D2
+            BEQ         dnDest
+            BRA         dnSource
 
-;MULS,AND,LSL,LSR,ASL,ASR
-M1100:
 
+;===================OLD VERSION====================
+;;MULS,AND,LSL,LSR,ASL,ASR
+;M1100:
+
+;MMULS:
+;MAND:
+;MLSL:
+;MLSR:
+;MASL:
+;MASR:
+;==================================================
+
+;MULS,AND
+M1100:      
+            CLR.L       D2
+            CLR.L       D3
+            
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bits 6 and 7
+            MOVE.B      #6,D3             ;Start bit index = 6
+            MOVE.B      #2,D4             ;Number of bits needed = 2
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
+            
+            ;If bits 6 & 7 are not #%11 then the opcode is MAND. If they are, then check 8th bit to determine if its MULS
+            CMP.B       #%11,D2
+            BEQ         mulsCheck
+            BRA         MAND
+            
+mulsCheck:
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bit 8
+            MOVE.B      #8,D3             ;Start bit index = 8
+            MOVE.B      #1,D4             ;Number of bits needed = 1
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits 
+            
+            ;If 8th bit is 1 then branch to MULS. Otherwise, print error
+            CMP.B       #1,D2
+            BEQ         MMULS
+            
+            ;************TO DO: BRANCH TO ERROR MESSAGE IF NOT MULS**************
+
+            
+            
+            
 MMULS:
+            LEA         printMULS,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            BRA         dnDest 
+
+
 MAND:
+            LEA        printAND,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            ;D2 already contains the size bits for AND (bits 6,7) so no need for isolating again
+            ;Jumps to printSizeSubroutine and returns after size has been printed
+            BSR         printSizeSubroutine
+            
+            ;======Isolate direction (D) Bit=======
+            ; 0 = data register is destination | 1 = Dn is source
+            CLR.L       D2
+            
+            ;Copy the address values into a register
+            MOVE.W      (A2),D2
+            
+            ;Passing in parameters for isolating direction bit
+            MOVE.B      #8,D3           ;Start bit index = 8
+            MOVE.B      #1,D4           ;Number of bits needed = 1
+
+            ;Jumps to getBits and returns with isolated bit in D2
+            BSR         getBits
+            
+            ;Uses direction bit to see if Dn is the destination. Important because it determines the order in which we isolate and print the addressing bits.
+            CMP.B       #0,D2
+            BEQ         dnDest
+            BRA         dnSource
+            
+            
+            BRA         update          ;Unnecessary with current implementation. dnDest & dnSource will call it instead
+   
+   
+*-----------------------------------------------------------------------
+*-----------------------------------------------------------------------
+*-----------------------------------------------------------------------
+;LSL,LSR,ASL,ASR
+M1110:
+
 MLSL:
 MLSR:
 MASL:
 MASR:
+*-----------------------------------------------------------------------
+*-----------------------------------------------------------------------
+*-----------------------------------------------------------------------
+
+
+
 
 ;ADD
 M1101:
@@ -418,47 +676,193 @@ M1101:
             CLR.B      D2
             CLR.B      D3
             
+            ;======Isolate Size (S) Bits=======
             ;Copy the address values into a register
             MOVE.W     (A2),D2
             
-            ;1101 0100 00    00 0011
-            ;0000 0011 0000 0000
+            ;Passing in parameters for isolating size bits
+            MOVE.B      #6,D3             ;Start bit index = 6
+            MOVE.B      #2,D4             ;Number of bits needed = 2
             
-            ;0000 0000 0000 0011 
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
             
-            ;Shift 8 bits left
-            LSL.L      #8,D2
-            ;Shift 14 bits right to isolate the size (2 bits)
-            MOVE.B     #14,D3
-            LSR.W      D3,D2
+            ;Jumps to printSizeSubroutine and returns after size has been printed
+            BSR         printSizeSubroutine
+       
+            ;======Isolate direction (D) Bit=======
+            ; 0 = data register is destination | 1 = Dn is source
+            CLR.L       D2
             
-            ;Compare to which size is being moved for the opcode
-            CMP.B      #00,D2
-            BEQ        PByte
+            ;Copy the address values into a register
+            MOVE.W      (A2),D2
             
-            CMP.B      #01,D2
-            BEQ        PWord
+            ;Passing in parameters for isolating direction bit
+            MOVE.B      #8,D3             ;Start bit index = 8
+            MOVE.B      #1,D4             ;Number of bits needed = 1
             
-            CMP.B      #10,D2
-            BEQ        PLong
+            ;Jumps to getBits and returns with isolated bit in D2
+            BSR         getBits
             
+            ;Uses direction bit to see if Dn is the destination. Important because it determines the order in which we isolate and print the addressing bits.
+            CMP.B       #0,D2
+            BEQ         dnDest
+            BRA         dnSource
             
-            ;Isolate bits 5,6,7 to get the source 
-            
-            ;Isolate bits 11,12,13 to get the addressing mode
-            
-            ;Isoalte bits 14,15,16 to get the destination
-            
-            ;00 B, 01 W, 10 L
 
+*-----------------------------------------------------------------
+* dnDest, dnSource, & other subroutines for isolating address bits
+*-----------------------------------------------------------------
+;* dnDest,dnSource *
+;For: MULS,AND,ADD,SUB,DIVU
+;Used by instructions that require Dn as one of their addressing modes.
+;dnDest isolates the addressing bits with Dn being the destination address
+;dnSource isolates the addressing bits with Dn being the source address
+
+dnDest:
+            ;**Used for isolating addressing bits when Dn is the destination**
             
+            ;*SOURCE*
+            ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
+            ;D6 will contain mode & D7 will contain the register after this instruction
+            BSR         isolateAddressBit0to5
             
-            BRA        update
+            ;*Print source address*
+            BSR         addressModeSR
             
+            ;Print comma after source address
+            LEA         printComma,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;*DESTINATION*
+            ;Jumps to helper subroutine to isolates and return the register stored in bits 9 - 11
+            ;D7 will contain the register after this instruction
+            BSR         isolateRegisterBit9to11
+            
+            ;Save #%000 into D6 to specify data register mode
+            MOVE.B      #0,D6
+            
+            ;*Print destination address*
+            BSR         addressModeSR
+
+            BRA         update
+            
+dnSource:
+            ;**Used for isolating addressing bits when Dn is the destination**
+                        
+            ;*SOURCE*
+            ;Jumps to helper subroutine to isolates and return the register stored in bits 9 - 11
+            ;D7 will contain the register after this instruction
+            BSR         isolateRegisterBit9to11
+            
+            ;Save #%000 into D6 to specify data register mode
+            MOVE.B      #0,D6
+            
+            ;*Print Source address*
+            BSR         addressModeSR
+            
+            ;Print comma after source address
+            LEA         printComma,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;*DESTINATION*
+            ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
+            ;D6 will contain mode & D7 will contain the register after this instruction
+            BSR         isolateAddressBit0to5
+            
+            ;*Print destination address*
+            BSR         addressModeSR
+
+            BRA         update
+                   
+isolateAddressBit0to5:
+;Helper subroutine for isolating the address stored within bits 0-5
+;Stores address mode in D6
+;Stores address register in D7
+
+            ;======Isolate Effective Address Mode (M) Bits=======
+            CLR.L       D2
+            
+            ;Copy the address values into a register
+            MOVE.W      (A2),D2
+            
+            ;Passing in parameters for isolating Mode bits
+            MOVE.B      #3,D3             ;Start bit index = 3
+            MOVE.B      #3,D4             ;Number of bits needed = 3
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            JSR         getBits
+            
+            ;Save M bit into ***D6*** for later use in addressModeSubroutine
+            MOVE.B      D2,D6
+            
+                     
+            ;======Isolate Effective Address Register (Xn) Bits=======
+            CLR.L       D2
+            
+            ;Copy the address values into a register
+            MOVE.W      (A2),D2
+            
+            ;Passing in parameters for isolating Xn bits
+            MOVE.B      #0,D3             ;Start bit index = 0
+            MOVE.B      #3,D4             ;Number of bits needed = 3
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+            
+            ;Save Xn register bit into ***D7*** for later use in addressModeSR
+            MOVE.B      D2,D7
+            
+            RTS
+
+isolateRegisterBit9to11:
+;Helper subroutine for isolating the register stored within bits 9-11
+;Stores the address register in D7
+
+            ;======Isolate Register Bits=======
+            CLR.L       D2
+            CLR.L       D6
+            CLR.L       D7
+            
+            ;Copy the address values into a register
+            MOVE.W      (A2),D2
+            
+            ;Passing in parameters for isolating register bits
+            MOVE.B      #9,D3             ;Start bit index = 9
+            MOVE.B      #3,D4             ;Number of bits needed = 3
+            
+            ;Jumps to getBits and returns with isolated bit in D2
+            BSR         getBits
+            
+            ;Save register bit into ***D7*** for later use in addressModeSR
+            MOVE.B      D2,D7
+
+            RTS
             
 *-----------------------------------------------------------
 * Print Sizes
-*-----------------------------------------------------------           
+*-----------------------------------------------------------
+printSizeSubroutine:
+            ;Prints the apporpriate size
+            ;PARAMETER:
+            ;D2 = the size bits
+            
+            ;Compare to which size is being moved for the opcode
+            CMP.B      #%00,D2
+            BEQ        PByte
+            
+            CMP.B      #%01,D2
+            BEQ        PWord
+            
+            CMP.B      #%10,D2
+            BEQ        PLong
+            
+            CMP.B      #%11,D2
+            BEQ        sError
+         
+           
 PByte:
             LEA        printSIZEB,A1
             MOVE.B     #14,D0
@@ -472,30 +876,125 @@ PWord:
             
             RTS
 PLong:            
-            LEA        printSIZEB,A1
+            LEA        printSIZEL,A1
             MOVE.B     #14,D0
             TRAP       #15
             
             RTS
+            
+sError:            
+            LEA        sizeError,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            BRA        update
 *-----------------------------------------------------------
 * Addressing Mode Implementation
 *-----------------------------------------------------------
+addressModeSR:
+            ;Prints address according to the parameters passed in
+            ;PARAMETERS:
+            ;D6 = mode
+            ;D7 = register
+
+            CMP.B       #%000,D6
+            BEQ         DRD
+            
+            CMP.B       #%001,D6
+            BEQ         ARD
+            
+            CMP.B       #%010,D6
+            BEQ         ARI
+            
+            CMP.B       #%011,D6
+            BEQ         PI
+            
+            CMP.B       #%100,D6
+            BEQ         PD
 DRD:
             ;Print D __
+            LEA         printDRD,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Print register number
+            MOVE.L      #3,D0
+            MOVE.L      D7,D1
+            TRAP        #15
+            
+            RTS
 ARD:
             ;Print A __
+            LEA         printARD,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Print register number
+            MOVE.L      #3,D0
+            MOVE.L      D7,D1
+            TRAP        #15
+            
+            RTS
 ARI:
             ;Print (A __ )
-IA:
-            ;Print #$ ______
+            LEA         printARI,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Print register number
+            MOVE.L      #3,D0
+            MOVE.L      D7,D1
+            TRAP        #15
+            
+            ;Print closing ')'
+            LEA         printARI2,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            RTS
 PI:
             ;Print (A __)+
+            LEA         printPI,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Print register number
+            MOVE.L      #3,D0
+            MOVE.L      D7,D1
+            TRAP        #15
+            
+            ;Print closing ')+'
+            LEA         printPI2,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            RTS
 PD:
             ;Print -(A __)
+            LEA         printPD,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Print register number
+            MOVE.L      #3,D0
+            MOVE.L      D7,D1
+            TRAP        #15
+            
+            ;Print closing ')'
+            LEA         printPD2,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            RTS
+IA:
+            ;Print #$ ______
+            RTS
 ALA:
             ;Print $-------- (8 digits)
+            RTS
 AWA:
             ;Print $---- (4 digits)
+            RTS
 
 
 *-----------------------------------------------------------
@@ -515,7 +1014,7 @@ printR:
             
             BRA        update
 ;-----------------------------------------------------------
-;ERROR MESSAGES
+;ERROR MESSAGES FOR I/O portion
 ;-----------------------------------------------------------
 charError:
             
@@ -553,11 +1052,18 @@ Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
 userSA      DC.B        'Please enter your starting hex address (Only uppercase letters)',CR,LF,0
 userEA      DC.B        'Please enter your ending hex address (Only uppercase letters)',CR,LF,0
 
-printNOP    DC.B        'NOP',CR,LF,0
-printRTS    DC.B        'RTS',CR,LF,0
-printMOVE   DC.B        'MOVE',0
-printADD    DC.B        'ADD',0
-printSUB    DC.B        'SUB',0
+printNOP    DC.B        CR,LF,'NOP',0
+printRTS    DC.B        CR,LF,'RTS',0
+printMOVE   DC.B        CR,LF,'MOVE',0
+printADD    DC.B        CR,LF,'ADD',0
+printSUB    DC.B        CR,LF,'SUB',0
+printAND    DC.B        CR,LF,'AND',0
+printMULS   DC.B        CR,LF,'MULS.W ',0
+printDIVU   DC.B        CR,LF,'DIVU.W ',0
+printLEA    DC.B        CR,LF,'LEA ',0
+printNOT    DC.B        CR,LF,'NOT',0
+
+
 
 printSIZEB   DC.B        '.B ',0
 printSIZEW   DC.W        '.W ',0
@@ -567,11 +1073,16 @@ printSIZEL   DC.L        '.L ',0
 printDRD      DC.B        'D',0
 printARD      DC.B        'A',0
 printARI      DC.B        '(A',0
+printARI2     DC.B        ')',0
 printIA       DC.B        '#',0
 printPI       DC.B        '(A',0
+printPI2      DC.B        ')+',0
 printPD       DC.B        '-(A',0
+printPD2      DC.B        ')',0
 ;printAA       DC.B        ''   /TBD
 
+printComma    DC.B        ',',0
+printSpace    DC.B        ' ',0
 
 theEnd      DC.B        CR,LF,'You are now ending the program',0
 
@@ -582,6 +1093,7 @@ invalCh     DC.B        'ERROR: Invalid Characters used',CR,LF,0
 odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
 manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the address',CR,LF,0
 endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
+sizeError   DC.B        'ERROR: Invalid size instruction',0
 
 ending:
             LEA         theEnd,A1
@@ -589,6 +1101,12 @@ ending:
             TRAP        #15
             
             END         MAIN 
+
+
+
+
+
+
 
 
 

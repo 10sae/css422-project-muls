@@ -1,6 +1,6 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/14/2021 4:40:22 PM
+Created On: 5/17/2021 5:31:46 PM
 
 00000000                             1  *-----------------------------------------------------------
 00000000                             2  * Title      : Final Project
@@ -27,573 +27,1084 @@ Created On: 5/14/2021 4:40:22 PM
 00001008                            23  ;        Check to see if value starts at odd mem location
 00001008                            24  *-----------------------------------------------------------
 00001008                            25              ;Show welcome to user
-00001008  43F9 00001290             26              LEA         Welcome,A1
+00001008  43F9 00001562             26              LEA         Welcome,A1
 0000100E  103C 000E                 27              MOVE.B      #14,D0
 00001012  4E4F                      28              TRAP        #15
 00001014                            29                     
-00001014                            30    
-00001014                            31  startingPrompt:
-00001014                            32              ;Ask the user for the starting hex
-00001014  43F9 000012B4             33              LEA         userSA,A1
-0000101A  103C 000E                 34              MOVE.B      #14,D0
-0000101E  4E4F                      35              TRAP        #15
-00001020                            36              
-00001020  D443                      37              ADD.W       D3,D2
-00001022                            38              
-00001022                            39              
-00001022                            40              ;Clear the registers in case we had an error
-00001022  227C 00000000             41              MOVE.L      #0,A1
-00001028  247C 00000000             42              MOVE.L      #0,A2
-0000102E  4283                      43              CLR.L       D3
-00001030  4284                      44              CLR.L       D4
-00001032  4285                      45              CLR.L       D5
-00001034  4286                      46              CLR.L       D6
-00001036                            47             
-00001036                            48              
-00001036                            49              ;Input for the hex (D1 equals number of chars)
-00001036  303C 0002                 50              MOVE.W      #2,D0
-0000103A  4E4F                      51              TRAP        #15
-0000103C                            52              
-0000103C                            53              ;Moves A1 into A2      
-0000103C                            54              ;MOVEA.L     A1,A2
-0000103C                            55              
-0000103C                            56              ;Makes sure D7 is clear incase we're looping back after an error.
-0000103C  4207                      57              CLR.B       D7
-0000103E                            58              
-0000103E  6000 002A                 59              BRA         convert  
-00001042                            60              
-00001042                            61  endingPrompt:
-00001042                            62              ;D7 is if we're working with the first or second promt, used in the more checks section. 
-00001042  1E3C 0001                 63              MOVE.B       #1,D7
-00001046                            64              
-00001046                            65              ;Ask the user for the ending hex
-00001046  43F9 000012F6             66              LEA         userEA,A1
-0000104C  103C 000E                 67              MOVE.B      #14,D0
-00001050  4E4F                      68              TRAP        #15
-00001052                            69              
-00001052                            70              ;Clearing the registers so we can reuse them for the ending address
-00001052  227C 00000000             71              MOVE.L      #0,A1
-00001058  247C 00000000             72              MOVE.L      #0,A2
-0000105E  4286                      73              CLR.L       D6
-00001060                            74  
-00001060                            75              ;Input for the hex (D1 equals number of chars)
-00001060  303C 0002                 76              MOVE.W      #2,D0
-00001064  4E4F                      77              TRAP        #15
-00001066                            78              
-00001066                            79              ;Moves A1 into A2      
-00001066                            80              ;MOVEA.L     A1,A2
-00001066                            81              
-00001066  6000 0002                 82              BRA         convert
-0000106A                            83  
-0000106A                            84  convert:    
-0000106A                            85              ;Check to see if D1 is greater than 6, limiting the address to 6 characters (subject to change)
-0000106A  B23C 0006                 86              CMP.B       #6, D1
-0000106E  6E00 0200                 87              BGT         manyCharError  
-00001072                            88              
-00001072                            89              ;See if our counter variable is 0
-00001072  B23C 0000                 90              CMP.B       #0,D1
-00001076                            91              
-00001076                            92              ;This means that we have gone through all the characters
-00001076  6700 0046                 93              BEQ         moreChecks
-0000107A                            94              
-0000107A                            95              ;Decrement the counter, this means we're about to go through another char
-0000107A  5301                      96              SUB.B       #1,D1
-0000107C                            97  
-0000107C                            98              ;Let's move the byte stored at A1
-0000107C  1612                      99              MOVE.B      (A2),D3
-0000107E                           100              
-0000107E                           101              ;If the byte is greater than or equal to hex $40, then it's a letter
-0000107E  B63C 0041                102              CMP.B       #$41,D3
-00001082  6C00 000A                103              BGE         letter
-00001086                           104              
-00001086                           105              ;If the byte is less than or equal to hex $39, then it's a number
-00001086  B63C 0040                106              CMP.B       #$40,D3
-0000108A  6F00 0016                107              BLE         number
-0000108E                           108              
-0000108E                           109  letter:
-0000108E                           110              ;We do this check to see if the character is greater than or equal 'G'
-0000108E  B63C 0047                111              CMP.B       #$47,D3
-00001092                           112              ;If so, then display an error and ask the user to enter startingAdd again
-00001092  6C00 01BC                113              BGE         charError
-00001096                           114              
-00001096                           115              ;Subtract the Ascii value to convert to hex
-00001096  0403 0037                116              SUB.B       #$37,D3
-0000109A                           117              ;Move the value back to our register
-0000109A  14C3                     118              MOVE.B      D3,(A2)+
-0000109C                           119              
-0000109C                           120              ;Shift D5 left to make room for next hex value
-0000109C  E986                     121              ASL.L       #4, D6
-0000109E                           122              ;Move value to D5
-0000109E  DC03                     123              ADD.B      D3, D6
-000010A0                           124              
-000010A0  60C8                     125              BRA         convert
-000010A2                           126             
-000010A2                           127  
-000010A2                           128  number:          
-000010A2                           129             ;We do this check to see if the character is less than or equal to '/'  
-000010A2  B63C 002F                130             CMP.B        #$2F,D3
-000010A6                           131             ;If so, then display an error and ask the user to enter startingAdd again
-000010A6  6F00 01A8                132             BLE          charError     
-000010AA                           133   
-000010AA                           134             ;Check to see if the character is greater than or equal to ':'
-000010AA  B63C 003A                135             CMP.B        #$3A,D3
-000010AE                           136             ;If so, then display an error and ask the user to enter startingAdd again
-000010AE  6C00 01A0                137             BGE          charError
-000010B2                           138            
-000010B2                           139             ;Subtract the Ascii value to convert to hex
-000010B2  0403 0030                140             SUB.B        #$30,D3
-000010B6                           141             ;Move the value back to our register
-000010B6  14C3                     142             MOVE.B       D3,(A2)+
-000010B8                           143   
-000010B8                           144             ;Shift D5 left to make room for next hex value
-000010B8  E986                     145             ASL.L        #4, D6
-000010BA                           146             ;Move value to D5
-000010BA  DC03                     147             ADD.B        D3, D6
-000010BC                           148              
-000010BC  60AC                     149             BRA          convert
-000010BE                           150   
-000010BE                           151            
-000010BE                           152  moreChecks:
-000010BE                           153              ;Determine if we're going to moreChecks1 or moreChecks2 (if we're on starting or ending address)
-000010BE  BE3C 0001                154              CMP.B      #1,D7
-000010C2  6700 0028                155              BEQ        moreChecks2
-000010C6                           156              
-000010C6  6000 0002                157              BRA        moreChecks1
-000010CA                           158   
-000010CA                           159  moreChecks1:
-000010CA                           160              
-000010CA                           161              ;Copy the hex value into a temp register
-000010CA  2806                     162              MOVE.L      D6,D4
-000010CC                           163              
-000010CC                           164              ;Placeholder to shift bits, used for seeing if the address is odd. 
-000010CC  1A3C 001F                165              MOVE.B      #31,D5
-000010D0                           166              
-000010D0                           167              ;Shifts 31 bits, isolates last bit. 
-000010D0  EBAC                     168              LSL.L       D5,D4
-000010D2                           169  
-000010D2                           170              ;Shifts it back 31 bit, isolating the last bit. 
-000010D2  EAAC                     171              LSR.L       D5,D4
-000010D4                           172  
-000010D4                           173              ;If the last bit is 1, address was odd, and throw an error. 
-000010D4  B83C 0001                174              CMP.B       #1,D4
-000010D8  6700 0186                175              BEQ         oddError   
-000010DC                           176                          
-000010DC                           177              ;Reset address registers.
-000010DC  247C 00000000            178              MOVE.L      #0,A2
-000010E2                           179              
-000010E2                           180              ;Copy the value to our staHex variable
-000010E2  21C6 1000                181              MOVE.L      D6,staHex 
-000010E6                           182              
-000010E6  4286                     183              CLR.L       D6
-000010E8  6000 FF58                184              BRA         endingPrompt     
-000010EC                           185              
-000010EC                           186  moreChecks2:       
-000010EC                           187              
-000010EC                           188              ;Copy the hex value into a temp register
-000010EC  2806                     189              MOVE.L      D6,D4
-000010EE                           190              
-000010EE                           191              ;Placeholder to shift bits, used for seeing if the address is odd. 
-000010EE  1A3C 001F                192              MOVE.B      #31,D5
-000010F2                           193              
-000010F2                           194              ;Shifts 31 bits, isolates last bit. 
-000010F2  EBAC                     195              LSL.L       D5,D4
-000010F4                           196  
-000010F4                           197              ;Shifts it back 31 bit, isolating the last bit. 
-000010F4  EAAC                     198              LSR.L       D5,D4
-000010F6                           199  
-000010F6                           200              ;If the last bit is 1, address was odd, and throw an error. 
-000010F6  B83C 0001                201              CMP.B       #1,D4
-000010FA  6700 0164                202              BEQ         oddError   
-000010FE                           203                          
-000010FE                           204              ;Reset address registers.
-000010FE  247C 00000000            205              MOVE.L      #0,A2
-00001104                           206              
-00001104                           207              ;Place the value in our ending hex variable
-00001104  21C6 1004                208              MOVE.L      D6,endHex 
-00001108                           209              
-00001108                           210              ;Make D7 a temp location to compare our starting hex
-00001108  2E38 1000                211              MOVE.L      staHex,D7
-0000110C                           212           
-0000110C                           213              
-0000110C                           214              ;Compare the starting hex, with the ending hex to see if endHex is less than starting        
-0000110C  BC87                     215              CMP.L       D7,D6
-0000110E  6B00 0170                216              BMI         endGreater
-00001112                           217              
-00001112                           218              ;done, start reading memory. 
-00001112                           219              
-00001112                           220              ;Clear all the registers since we have the addresses stored in our variables
-00001112  4283                     221              CLR.L       D3
-00001114  4285                     222              CLR.L       D5
-00001116  4286                     223              CLR.L       D6
-00001118  4287                     224              CLR.L       D7  
-0000111A                           225              
-0000111A                           226              ;Copy the value of our starting hex to A2 (temp register)
-0000111A  2478 1000                227              MOVEA.L     staHex,A2
-0000111E                           228                          
-0000111E                           229              
-0000111E                           230  LOOP:   
-0000111E                           231              ;--------------------------------------------------------
-0000111E                           232              ;Check for NOP or RTS
-0000111E                           233              ;--------------------------------------------------------
-0000111E                           234              ;Move the NOP binary value for comparing
-0000111E  243C 00004E71            235              MOVE.L      #%0100111001110001,D2
-00001124                           236              
-00001124                           237              ;Check and see i the instruction is NOP
-00001124  B452                     238              CMP.W       (A2),D2
-00001126  6700 0108                239              BEQ         printN
-0000112A                           240              
-0000112A                           241              ;Move the RTS binary value for comparing
-0000112A  243C 00004E75            242              MOVE.L      #%0100111001110101,D2
-00001130                           243              
-00001130                           244              ;Check and see if the instruction is RTS
-00001130  B452                     245              CMP.W       (A2),D2
-00001132  6700 010C                246              BEQ         printR
-00001136                           247              
-00001136                           248              ;Clear the contents for reusing
-00001136  4282                     249              CLR.L       D2
-00001138                           250              
-00001138                           251              
-00001138                           252              ;--------------------------------------------------------
-00001138                           253              ;Check for MOVE, since it's the only word starting with 00
-00001138                           254              ;--------------------------------------------------------            
-00001138                           255              ;Move the value in A2 to a temp register
-00001138  1412                     256              MOVE.B      (A2),D2
-0000113A                           257              
-0000113A                           258              ;Shift 6 bits to the right to isolate the left-most digits
-0000113A  EC8A                     259              LSR.L       #6,D2
-0000113C                           260              
-0000113C                           261              ;If the first two bits (left-most) are 00, then the instruction is MOVE
-0000113C  B43C 0000                262              CMP.B       #00,D2
-00001140  6F00 004C                263              BLE         M00
-00001144                           264              
-00001144                           265              ;Reuse the register
-00001144  4282                     266              CLR.L       D2
-00001146                           267              
-00001146                           268              
-00001146                           269              ;--------------------------------------------------------
-00001146                           270              ;Check for other OpCodes
-00001146                           271              ;--------------------------------------------------------
-00001146                           272              ;Move the word into a temp register 
-00001146  3412                     273              MOVE.W      (A2),D2
-00001148                           274              
-00001148                           275              ;Since LSR can only take 0-9, we can use a data register
-00001148  163C 000C                276              MOVE.B      #12,D3
-0000114C                           277              ;Shift 12 bits to isolate the left-most digits
-0000114C  E6AA                     278              LSR.L       D3,D2
-0000114E                           279                        
-0000114E                           280        
-0000114E                           281              
-0000114E                           282              
-0000114E                           283              ;MOVEM,LEA,NOT,JSR
-0000114E  B43C 0004                284              CMP.B       #%0100,D2
-00001152  6700 004C                285              BEQ         M0100
-00001156                           286              
-00001156                           287              ;BRA,BLT,BGE,BEQ
-00001156  B43C 0006                288              CMP.B       #%0110,D2
-0000115A  6700 0044                289              BEQ         M0110
-0000115E                           290              
-0000115E                           291              ;DIVU
-0000115E  B43C 0008                292              CMP.B       #%1000,D2
-00001162  6700 003C                293              BEQ         M1000
-00001166                           294              
-00001166                           295              ;SUB
-00001166  B43C 0009                296              CMP.B       #%1001,D2
-0000116A  6700 0034                297              BEQ         M1001
-0000116E                           298              
-0000116E                           299              ;MULS,AND,LSL,LSR,ASL,ASR
-0000116E  B43C 000C                300              CMP.B       #%1100,D2
-00001172  6700 005C                301              BEQ         M1100
-00001176                           302              
-00001176                           303              ;ADD
-00001176  B43C 000D                304              CMP.B       #%1101,D2
-0000117A  6700 0054                305              BEQ         M1101
-0000117E                           306              
-0000117E  6000 02E1                307              BRA         ending
-00001182                           308              
-00001182                           309              
-00001182                           310              
-00001182                           311              ;display INVALID OPCODE, and display the raw hex
-00001182                           312              ;do this later
-00001182                           313  
-00001182                           314             
-00001182                           315  update:
-00001182                           316              ;Check and see if we are at the ending hex
-00001182  B5F8 1004                317              CMP.L      endHex,A2
-00001186  6700 02D9                318              BEQ        ending
-0000118A                           319  
-0000118A                           320              ;Update address in A2
-0000118A  548A                     321              ADD.L      #2,A2
-0000118C                           322              
-0000118C                           323              
-0000118C  6090                     324              BRA        LOOP
-0000118E                           325  
-0000118E                           326  *-----------------------------------------------------------
-0000118E                           327  * OpCode Implementation
-0000118E                           328  ;
-0000118E                           329  *-----------------------------------------------------------
-0000118E                           330  
-0000118E                           331  ;MOVE
-0000118E                           332  M00:
-0000118E  43F9 00001342            333              LEA        printMOVE,A1
-00001194  103C 000E                334              MOVE.B     #14,D0
-00001198  4E4F                     335              TRAP       #15
-0000119A                           336              
-0000119A  4202                     337              CLR.B      D2
-0000119C  4203                     338              CLR.B      D3
-0000119E                           339              
-0000119E                           340              
-0000119E  60E2                     341              BRA        update
-000011A0                           342            
-000011A0                           343  
-000011A0                           344  ;MOVEM,LEA,NOT,JSR
-000011A0                           345  M0100:        
-000011A0                           346                   
-000011A0                           347  MOVEM:
-000011A0                           348  MLEA:
-000011A0                           349  MNOT:
-000011A0                           350  MJSR:
-000011A0                           351     
-000011A0                           352  
-000011A0                           353  ;BRA,BLT,BGE,BEQ         
-000011A0                           354  M0110:
-000011A0                           355              ;
-000011A0                           356  MBRA:
-000011A0                           357  MBLT:
-000011A0                           358  MBGE:
-000011A0                           359  MBEQ:            
-000011A0                           360              
-000011A0                           361  ;DIVU            
-000011A0                           362  M1000:
-000011A0                           363  
-000011A0                           364  ;SUB
-000011A0                           365  M1001:
-000011A0  43F9 0000134B            366              LEA        printSUB,A1
-000011A6  103C 000E                367              MOVE.B     #14,D0
-000011AA  4E4F                     368              TRAP       #15
-000011AC                           369              
-000011AC  4202                     370              CLR.B      D2
-000011AE  4203                     371              CLR.B      D3
-000011B0                           372              
-000011B0                           373              ;Copy the address values into a register
-000011B0  2412                     374              MOVE.L     (A2),D2
-000011B2                           375              
-000011B2                           376              
-000011B2                           377              ;Shift 8 bits left
-000011B2  E18A                     378              LSL.L      #8,D2
-000011B4                           379              ;Shift 14 bits right to isolate the size (2 bits)
-000011B4  E48A                     380              LSR.L      #2,D2
-000011B6                           381              
-000011B6                           382              ;Compare to which size is being moved for the opcode
-000011B6  B43C 0000                383              CMP.B      #00,D2
-000011BA  6700 004A                384              BEQ        PByte
-000011BE                           385              
-000011BE  B43C 0001                386              CMP.B      #01,D2
-000011C2  6700 0050                387              BEQ        PWord
-000011C6                           388              
-000011C6  B43C 000A                389              CMP.B      #10,D2
-000011CA  6700 0056                390              BEQ        PLong
-000011CE                           391              
-000011CE                           392              
-000011CE                           393              ;Isolate bits 5,6,7 to get the source 
-000011CE                           394              
-000011CE                           395              ;Isolate bits 11,12,13 to get the addressing mode
-000011CE                           396              
-000011CE                           397              ;Isoalte bits 14,15,16 to get the destination
-000011CE                           398              
-000011CE                           399              ;00 B, 01 W, 10 L
-000011CE                           400              
-000011CE  60B2                     401              BRA        update
-000011D0                           402  
-000011D0                           403  ;MULS,AND,LSL,LSR,ASL,ASR
-000011D0                           404  M1100:
-000011D0                           405  
-000011D0                           406  MMULS:
-000011D0                           407  MAND:
-000011D0                           408  MLSL:
-000011D0                           409  MLSR:
-000011D0                           410  MASL:
-000011D0                           411  MASR:
-000011D0                           412  
-000011D0                           413  ;ADD
-000011D0                           414  M1101:
-000011D0  43F9 00001347            415              LEA        printADD,A1
-000011D6  103C 000E                416              MOVE.B     #14,D0
-000011DA  4E4F                     417              TRAP       #15
-000011DC                           418              
-000011DC  4202                     419              CLR.B      D2
-000011DE  4203                     420              CLR.B      D3
-000011E0                           421              
-000011E0                           422              ;Copy the address values into a register
-000011E0  3412                     423              MOVE.W     (A2),D2
-000011E2                           424              
-000011E2                           425              ;1101 0100 00    00 0011
-000011E2                           426              ;0000 0011 0000 0000
-000011E2                           427              
-000011E2                           428              ;0000 0000 0000 0011 
-000011E2                           429              
-000011E2                           430              ;Shift 8 bits left
-000011E2  E18A                     431              LSL.L      #8,D2
-000011E4                           432              ;Shift 14 bits right to isolate the size (2 bits)
-000011E4  163C 000E                433              MOVE.B     #14,D3
-000011E8  E66A                     434              LSR.W      D3,D2
-000011EA                           435              
-000011EA                           436              ;Compare to which size is being moved for the opcode
-000011EA  B43C 0000                437              CMP.B      #00,D2
-000011EE  6700 0016                438              BEQ        PByte
-000011F2                           439              
-000011F2  B43C 0001                440              CMP.B      #01,D2
-000011F6  6700 001C                441              BEQ        PWord
-000011FA                           442              
-000011FA  B43C 000A                443              CMP.B      #10,D2
-000011FE  6700 0022                444              BEQ        PLong
-00001202                           445              
-00001202                           446              
-00001202                           447              ;Isolate bits 5,6,7 to get the source 
-00001202                           448              
-00001202                           449              ;Isolate bits 11,12,13 to get the addressing mode
-00001202                           450              
-00001202                           451              ;Isoalte bits 14,15,16 to get the destination
-00001202                           452              
-00001202                           453              ;00 B, 01 W, 10 L
-00001202                           454  
-00001202                           455              
-00001202                           456              
-00001202  6000 FF7E                457              BRA        update
-00001206                           458              
-00001206                           459              
-00001206                           460  *-----------------------------------------------------------
-00001206                           461  * Print Sizes
-00001206                           462  *-----------------------------------------------------------           
-00001206                           463  PByte:
-00001206  43F9 0000134F            464              LEA        printSIZEB,A1
-0000120C  103C 000E                465              MOVE.B     #14,D0
-00001210  4E4F                     466              TRAP       #15
-00001212                           467              
-00001212  4E75                     468              RTS
-00001214                           469  PWord:
-00001214  43F9 00001354            470              LEA        printSIZEW,A1
-0000121A  103C 000E                471              MOVE.B     #14,D0
-0000121E  4E4F                     472              TRAP       #15
-00001220                           473              
-00001220  4E75                     474              RTS
-00001222                           475  PLong:            
-00001222  43F9 0000134F            476              LEA        printSIZEB,A1
-00001228  103C 000E                477              MOVE.B     #14,D0
-0000122C  4E4F                     478              TRAP       #15
-0000122E                           479              
-0000122E  4E75                     480              RTS
-00001230                           481  *-----------------------------------------------------------
-00001230                           482  * Addressing Mode Implementation
-00001230                           483  *-----------------------------------------------------------
-00001230                           484  DRD:
-00001230                           485              ;Print D __
-00001230                           486  ARD:
-00001230                           487              ;Print A __
-00001230                           488  ARI:
-00001230                           489              ;Print (A __ )
-00001230                           490  IA:
-00001230                           491              ;Print #$ ______
-00001230                           492  PI:
-00001230                           493              ;Print (A __)+
-00001230                           494  PD:
-00001230                           495              ;Print -(A __)
-00001230                           496  ALA:
-00001230                           497              ;Print $-------- (8 digits)
-00001230                           498  AWA:
-00001230                           499              ;Print $---- (4 digits)
-00001230                           500  
-00001230                           501  
-00001230                           502  *-----------------------------------------------------------
-00001230                           503  * Print Instructions
-00001230                           504  *-----------------------------------------------------------
-00001230                           505  printN:
-00001230  43F9 00001336            506              LEA        printNOP,A1
-00001236  103C 000E                507              MOVE.B     #14,D0
-0000123A  4E4F                     508              TRAP       #15
-0000123C                           509              
-0000123C  6000 FF44                510              BRA        update
-00001240                           511  
-00001240                           512  printR:
-00001240  43F9 0000133C            513              LEA        printRTS,A1
-00001246  103C 000E                514              MOVE.B     #14,D0
-0000124A  4E4F                     515              TRAP       #15
-0000124C                           516              
-0000124C  6000 FF34                517              BRA        update
-00001250                           518  ;-----------------------------------------------------------
-00001250                           519  ;ERROR MESSAGES
-00001250                           520  ;-----------------------------------------------------------
-00001250                           521  charError:
-00001250                           522              
-00001250  43F9 00001393            523              LEA         invalCh,A1
-00001256  103C 000E                524              MOVE.B      #14,D0
-0000125A  4E4F                     525              TRAP        #15
-0000125C                           526              
-0000125C  6000 FDB6                527              BRA         startingPrompt
-00001260                           528            
-00001260                           529  oddError:
-00001260  43F9 000013B4            530              LEA         odd,A1
-00001266  103C 000E                531              MOVE.B      #14,D0
-0000126A  4E4F                     532              TRAP        #15
-0000126C                           533              
-0000126C  6000 FDA6                534              BRA         startingPrompt
-00001270                           535              
-00001270                           536  manyCharError:  
-00001270  43F9 000013E1            537              LEA         manyChar, A1
-00001276  103C 000E                538              MOVE.B      #14,D0
-0000127A  4E4F                     539              TRAP        #15
-0000127C                           540              
-0000127C  6000 FD96                541              BRA         startingPrompt
-00001280                           542           
-00001280                           543  endGreater:
-00001280  43F9 0000141C            544              LEA         endG,A1
-00001286  103C 000E                545              MOVE.B      #14,D0
-0000128A  4E4F                     546              TRAP        #15
-0000128C                           547              
-0000128C  6000 FD86                548              BRA         startingPrompt
-00001290                           549      
-00001290                           550  ;-----------------------------------------------------------
-00001290                           551  ;MESSAGES
-00001290                           552  ;-----------------------------------------------------------
-00001290= 57 65 6C 63 6F 6D ...    553  Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
-000012B4= 50 6C 65 61 73 65 ...    554  userSA      DC.B        'Please enter your starting hex address (Only uppercase letters)',CR,LF,0
-000012F6= 50 6C 65 61 73 65 ...    555  userEA      DC.B        'Please enter your ending hex address (Only uppercase letters)',CR,LF,0
-00001336                           556  
-00001336= 4E 4F 50 0D 0A 00        557  printNOP    DC.B        'NOP',CR,LF,0
-0000133C= 52 54 53 0D 0A 00        558  printRTS    DC.B        'RTS',CR,LF,0
-00001342= 4D 4F 56 45 00           559  printMOVE   DC.B        'MOVE',0
-00001347= 41 44 44 00              560  printADD    DC.B        'ADD',0
-0000134B= 53 55 42 00              561  printSUB    DC.B        'SUB',0
-0000134F                           562  
-0000134F= 2E 42 20 00              563  printSIZEB   DC.B        '.B ',0
-00001354= 2E57 2000 0000           564  printSIZEW   DC.W        '.W ',0
-0000135A= 2E4C2000 00000000        565  printSIZEL   DC.L        '.L ',0
-00001362                           566  
-00001362                           567  
-00001362= 44 00                    568  printDRD      DC.B        'D',0
-00001364= 41 00                    569  printARD      DC.B        'A',0
-00001366= 28 41 00                 570  printARI      DC.B        '(A',0
-00001369= 23 00                    571  printIA       DC.B        '#',0
-0000136B= 28 41 00                 572  printPI       DC.B        '(A',0
-0000136E= 2D 28 41 00              573  printPD       DC.B        '-(A',0
-00001372                           574  ;printAA       DC.B        ''   /TBD
-00001372                           575  
-00001372                           576  
-00001372= 0D 0A 59 6F 75 20 ...    577  theEnd      DC.B        CR,LF,'You are now ending the program',0
-00001393                           578  
-00001393                           579  ;-----------------------------------------------------------
-00001393                           580  ;ERRORS
-00001393                           581  ;-----------------------------------------------------------
-00001393= 45 52 52 4F 52 3A ...    582  invalCh     DC.B        'ERROR: Invalid Characters used',CR,LF,0
-000013B4= 45 52 52 4F 52 3A ...    583  odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
-000013E1= 45 52 52 4F 52 3A ...    584  manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the address',CR,LF,0
-0000141C= 45 52 52 4F 52 3A ...    585  endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
-00001461                           586  
-00001461                           587  ending:
-00001462  43F8 1372                588              LEA         theEnd,A1
-00001466  303C 000E                589              MOVE        #14,D0
-0000146A  4E4F                     590              TRAP        #15
-0000146C                           591              
-0000146C                           592              END         MAIN 
+00001014                            30              ;===TESTING===
+00001014  49D3                      31              LEA (A3),A4
+00001016  4600                      32              NOT.B    D0
+00001018                            33              
+00001018                            34  startingPrompt:
+00001018                            35              ;Ask the user for the starting hex
+00001018  43F9 00001586             36              LEA         userSA,A1
+0000101E  103C 000E                 37              MOVE.B      #14,D0
+00001022  4E4F                      38              TRAP        #15        
+00001024                            39              
+00001024                            40              ;Clear the registers in case we had an error
+00001024  227C 00000000             41              MOVE.L      #0,A1
+0000102A  247C 00000000             42              MOVE.L      #0,A2
+00001030  4283                      43              CLR.L       D3
+00001032  4284                      44              CLR.L       D4
+00001034  4285                      45              CLR.L       D5
+00001036  4286                      46              CLR.L       D6
+00001038                            47             
+00001038                            48              
+00001038                            49              ;Input for the hex (D1 equals number of chars)
+00001038  303C 0002                 50              MOVE.W      #2,D0
+0000103C  4E4F                      51              TRAP        #15
+0000103E                            52              
+0000103E                            53              ;Moves A1 into A2      
+0000103E                            54              ;MOVEA.L     A1,A2
+0000103E                            55              
+0000103E                            56              ;Makes sure D7 is clear incase we're looping back after an error.
+0000103E  4207                      57              CLR.B       D7
+00001040                            58              
+00001040  6000 002A                 59              BRA         convert  
+00001044                            60              
+00001044                            61  endingPrompt:
+00001044                            62              ;D7 is if we're working with the first or second promt, used in the more checks section. 
+00001044  1E3C 0001                 63              MOVE.B       #1,D7
+00001048                            64              
+00001048                            65              ;Ask the user for the ending hex
+00001048  43F9 000015C8             66              LEA         userEA,A1
+0000104E  103C 000E                 67              MOVE.B      #14,D0
+00001052  4E4F                      68              TRAP        #15
+00001054                            69              
+00001054                            70              ;Clearing the registers so we can reuse them for the ending address
+00001054  227C 00000000             71              MOVE.L      #0,A1
+0000105A  247C 00000000             72              MOVE.L      #0,A2
+00001060  4286                      73              CLR.L       D6
+00001062                            74  
+00001062                            75              ;Input for the hex (D1 equals number of chars)
+00001062  303C 0002                 76              MOVE.W      #2,D0
+00001066  4E4F                      77              TRAP        #15
+00001068                            78              
+00001068                            79              ;Moves A1 into A2      
+00001068                            80              ;MOVEA.L     A1,A2
+00001068                            81              
+00001068  6000 0002                 82              BRA         convert
+0000106C                            83  
+0000106C                            84  convert:    
+0000106C                            85              ;Check to see if D1 is greater than 6, limiting the address to 6 characters (subject to change)
+0000106C  B23C 0006                 86              CMP.B       #6, D1
+00001070  6E00 04D0                 87              BGT         manyCharError  
+00001074                            88              
+00001074                            89              ;See if our counter variable is 0
+00001074  B23C 0000                 90              CMP.B       #0,D1
+00001078                            91              
+00001078                            92              ;This means that we have gone through all the characters
+00001078  6700 0046                 93              BEQ         moreChecks
+0000107C                            94              
+0000107C                            95              ;Decrement the counter, this means we're about to go through another char
+0000107C  5301                      96              SUB.B       #1,D1
+0000107E                            97  
+0000107E                            98              ;Let's move the byte stored at A1
+0000107E  1612                      99              MOVE.B      (A2),D3
+00001080                           100              
+00001080                           101              ;If the byte is greater than or equal to hex $40, then it's a letter
+00001080  B63C 0041                102              CMP.B       #$41,D3
+00001084  6C00 000A                103              BGE         letter
+00001088                           104              
+00001088                           105              ;If the byte is less than or equal to hex $39, then it's a number
+00001088  B63C 0040                106              CMP.B       #$40,D3
+0000108C  6F00 0016                107              BLE         number
+00001090                           108              
+00001090                           109  letter:
+00001090                           110              ;We do this check to see if the character is greater than or equal 'G'
+00001090  B63C 0047                111              CMP.B       #$47,D3
+00001094                           112              ;If so, then display an error and ask the user to enter startingAdd again
+00001094  6C00 048C                113              BGE         charError
+00001098                           114              
+00001098                           115              ;Subtract the Ascii value to convert to hex
+00001098  0403 0037                116              SUB.B       #$37,D3
+0000109C                           117              ;Move the value back to our register
+0000109C  14C3                     118              MOVE.B      D3,(A2)+
+0000109E                           119              
+0000109E                           120              ;Shift D5 left to make room for next hex value
+0000109E  E986                     121              ASL.L       #4, D6
+000010A0                           122              ;Move value to D5
+000010A0  DC03                     123              ADD.B      D3, D6
+000010A2                           124              
+000010A2  60C8                     125              BRA         convert
+000010A4                           126             
+000010A4                           127  
+000010A4                           128  number:          
+000010A4                           129             ;We do this check to see if the character is less than or equal to '/'  
+000010A4  B63C 002F                130             CMP.B        #$2F,D3
+000010A8                           131             ;If so, then display an error and ask the user to enter startingAdd again
+000010A8  6F00 0478                132             BLE          charError     
+000010AC                           133   
+000010AC                           134             ;Check to see if the character is greater than or equal to ':'
+000010AC  B63C 003A                135             CMP.B        #$3A,D3
+000010B0                           136             ;If so, then display an error and ask the user to enter startingAdd again
+000010B0  6C00 0470                137             BGE          charError
+000010B4                           138            
+000010B4                           139             ;Subtract the Ascii value to convert to hex
+000010B4  0403 0030                140             SUB.B        #$30,D3
+000010B8                           141             ;Move the value back to our register
+000010B8  14C3                     142             MOVE.B       D3,(A2)+
+000010BA                           143   
+000010BA                           144             ;Shift D5 left to make room for next hex value
+000010BA  E986                     145             ASL.L        #4, D6
+000010BC                           146             ;Move value to D5
+000010BC  DC03                     147             ADD.B        D3, D6
+000010BE                           148              
+000010BE  60AC                     149             BRA          convert
+000010C0                           150   
+000010C0                           151            
+000010C0                           152  moreChecks:
+000010C0                           153              ;Determine if we're going to moreChecks1 or moreChecks2 (if we're on starting or ending address)
+000010C0  BE3C 0001                154              CMP.B      #1,D7
+000010C4  6700 0028                155              BEQ        moreChecks2
+000010C8                           156              
+000010C8  6000 0002                157              BRA        moreChecks1
+000010CC                           158   
+000010CC                           159  moreChecks1:
+000010CC                           160              
+000010CC                           161              ;Copy the hex value into a temp register
+000010CC  2806                     162              MOVE.L      D6,D4
+000010CE                           163              
+000010CE                           164              ;Placeholder to shift bits, used for seeing if the address is odd. 
+000010CE  1A3C 001F                165              MOVE.B      #31,D5
+000010D2                           166              
+000010D2                           167              ;Shifts 31 bits, isolates last bit. 
+000010D2  EBAC                     168              LSL.L       D5,D4
+000010D4                           169  
+000010D4                           170              ;Shifts it back 31 bit, isolating the last bit. 
+000010D4  EAAC                     171              LSR.L       D5,D4
+000010D6                           172  
+000010D6                           173              ;If the last bit is 1, address was odd, and throw an error. 
+000010D6  B83C 0001                174              CMP.B       #1,D4
+000010DA  6700 0456                175              BEQ         oddError   
+000010DE                           176                          
+000010DE                           177              ;Reset address registers.
+000010DE  247C 00000000            178              MOVE.L      #0,A2
+000010E4                           179              
+000010E4                           180              ;Copy the value to our staHex variable
+000010E4  21C6 1000                181              MOVE.L      D6,staHex 
+000010E8                           182              
+000010E8  4286                     183              CLR.L       D6
+000010EA  6000 FF58                184              BRA         endingPrompt     
+000010EE                           185              
+000010EE                           186  moreChecks2:       
+000010EE                           187              
+000010EE                           188              ;Copy the hex value into a temp register
+000010EE  2806                     189              MOVE.L      D6,D4
+000010F0                           190              
+000010F0                           191              ;Placeholder to shift bits, used for seeing if the address is odd. 
+000010F0  1A3C 001F                192              MOVE.B      #31,D5
+000010F4                           193              
+000010F4                           194              ;Shifts 31 bits, isolates last bit. 
+000010F4  EBAC                     195              LSL.L       D5,D4
+000010F6                           196  
+000010F6                           197              ;Shifts it back 31 bit, isolating the last bit. 
+000010F6  EAAC                     198              LSR.L       D5,D4
+000010F8                           199  
+000010F8                           200              ;If the last bit is 1, address was odd, and throw an error. 
+000010F8  B83C 0001                201              CMP.B       #1,D4
+000010FC  6700 0434                202              BEQ         oddError   
+00001100                           203                          
+00001100                           204              ;Reset address registers.
+00001100  247C 00000000            205              MOVE.L      #0,A2
+00001106                           206              
+00001106                           207              ;Place the value in our ending hex variable
+00001106  21C6 1004                208              MOVE.L      D6,endHex 
+0000110A                           209              
+0000110A                           210              ;Make D7 a temp location to compare our starting hex
+0000110A  2E38 1000                211              MOVE.L      staHex,D7
+0000110E                           212           
+0000110E                           213              
+0000110E                           214              ;Compare the starting hex, with the ending hex to see if endHex is less than starting        
+0000110E  BC87                     215              CMP.L       D7,D6
+00001110  6B00 0440                216              BMI         endGreater
+00001114                           217              
+00001114                           218              ;done, start reading memory. 
+00001114                           219              
+00001114                           220              ;Clear all the registers since we have the addresses stored in our variables
+00001114  4283                     221              CLR.L       D3
+00001116  4285                     222              CLR.L       D5
+00001118  4286                     223              CLR.L       D6
+0000111A  4287                     224              CLR.L       D7  
+0000111C                           225              
+0000111C                           226              ;Copy the value of our starting hex to A2 (temp register)
+0000111C  2478 1000                227              MOVEA.L     staHex,A2
+00001120                           228                          
+00001120                           229              
+00001120                           230  LOOP:   
+00001120                           231              ;--------------------------------------------------------
+00001120                           232              ;Check for NOP or RTS
+00001120                           233              ;--------------------------------------------------------
+00001120                           234              
+00001120                           235              ;Move the NOP binary value for comparing
+00001120  243C 00004E71            236              MOVE.L      #%0100111001110001,D2
+00001126                           237              
+00001126                           238              ;Check and see i the instruction is NOP
+00001126  B452                     239              CMP.W       (A2),D2
+00001128  6700 03D8                240              BEQ         printN
+0000112C                           241              
+0000112C                           242              ;Move the RTS binary value for comparing
+0000112C  243C 00004E75            243              MOVE.L      #%0100111001110101,D2
+00001132                           244              
+00001132                           245              ;Check and see if the instruction is RTS
+00001132  B452                     246              CMP.W       (A2),D2
+00001134  6700 03DC                247              BEQ         printR
+00001138                           248              
+00001138                           249              ;Clear the contents for reusing
+00001138  4282                     250              CLR.L       D2
+0000113A                           251              
+0000113A                           252              
+0000113A                           253              ;--------------------------------------------------------
+0000113A                           254              ;Check for MOVE, since it's the only word starting with 00
+0000113A                           255              ;--------------------------------------------------------            
+0000113A                           256              ;Move the value in A2 to a temp register
+0000113A  1412                     257              MOVE.B      (A2),D2
+0000113C                           258              
+0000113C                           259              ;Shift 6 bits to the right to isolate the left-most digits
+0000113C  EC8A                     260              LSR.L       #6,D2
+0000113E                           261              
+0000113E                           262              ;If the first two bits (left-most) are 00, then the instruction is MOVE
+0000113E  B43C 0000                263              CMP.B       #00,D2
+00001142  6F00 0070                264              BLE         M00
+00001146                           265              
+00001146                           266              ;Reuse the register
+00001146  4282                     267              CLR.L       D2
+00001148                           268              
+00001148                           269              
+00001148                           270              ;--------------------------------------------------------
+00001148                           271              ;Check for other OpCodes
+00001148                           272              ;--------------------------------------------------------
+00001148                           273              ;Move the word into a temp register 
+00001148  3412                     274              MOVE.W      (A2),D2
+0000114A                           275              
+0000114A                           276              ;Passing in parameters for isolating the left most hand 4 bits of D2 using getBits
+0000114A  163C 000C                277              MOVE.B        #12,D3            ;Start bit index = 12
+0000114E  183C 0004                278              MOVE.B        #4,D4             ;Number of bits needed = 4
+00001152                           279              
+00001152                           280              ;Jumps to getBits and returns with isolated bits in D2
+00001152  6100 004A                281              BSR           getBits            
+00001156                           282  
+00001156                           283              
+00001156                           284              ;MOVEM,LEA,NOT,JSR
+00001156  B43C 0004                285              CMP.B       #%0100,D2
+0000115A  6700 006A                286              BEQ         M0100
+0000115E                           287              
+0000115E                           288              ;BRA,BLT,BGE,BEQ
+0000115E  B43C 0006                289              CMP.B       #%0110,D2
+00001162  6700 00EC                290              BEQ         M0110
+00001166                           291              
+00001166                           292              ;DIVU
+00001166  B43C 0008                293              CMP.B       #%1000,D2
+0000116A  6700 00E4                294              BEQ         M1000
+0000116E                           295              
+0000116E                           296              ;SUB
+0000116E  B43C 0009                297              CMP.B       #%1001,D2
+00001172  6700 0108                298              BEQ         M1001
+00001176                           299              
+00001176                           300              ;MULS,AND
+00001176  B43C 000C                301              CMP.B       #%1100,D2
+0000117A  6700 013E                302              BEQ         M1100
+0000117E                           303              
+0000117E                           304              ;LSL,LSR,ASL,ASR
+0000117E  B43C 000E                305              CMP.B       #%1110,D2
+00001182  6700 01AA                306              BEQ         M1110
+00001186                           307              
+00001186                           308              ;ADD
+00001186  B43C 000D                309              CMP.B       #%1101,D2
+0000118A  6700 01A2                310              BEQ         M1101
+0000118E                           311              
+0000118E  6000 05FA                312              BRA         ending
+00001192                           313              
+00001192                           314              
+00001192                           315              
+00001192                           316              ;display INVALID OPCODE, and display the raw hex
+00001192                           317              ;do this later
+00001192                           318  
+00001192                           319             
+00001192                           320  update:
+00001192                           321              ;Check and see if we are at the ending hex
+00001192  B5F8 1004                322              CMP.L      endHex,A2
+00001196  6700 05F2                323              BEQ        ending
+0000119A                           324  
+0000119A                           325              ;Update address in A2
+0000119A  548A                     326              ADD.L      #2,A2
+0000119C                           327              
+0000119C                           328              
+0000119C  6082                     329              BRA        LOOP
+0000119E                           330              
+0000119E                           331              
+0000119E                           332  getBits:
+0000119E                           333              ;GETS ___ MANY BITS STARTING FROM __ START BIT INDEX
+0000119E                           334              ;PARAMETERS:
+0000119E                           335              ;D2 = the value the bits are extracted from & saved back in
+0000119E                           336              ;D3 = the start bit index (starting from 0)
+0000119E                           337              ;D4 = the number of bits we want to extract
+0000119E                           338              
+0000119E                           339              ;Calculate left shift
+0000119E  3A3C 0010                340              MOVE.W      #16,D5
+000011A2                           341              
+000011A2  D843                     342              ADD.W       D3,D4             ; start bit index + number of bits needed = X 
+000011A4  9A44                     343              SUB.W       D4,D5             ; 16 - X = leftShift
+000011A6                           344              
+000011A6  EB6A                     345              LSL.W       D5,D2
+000011A8                           346              
+000011A8                           347              
+000011A8                           348              ;Calculate right shift
+000011A8  DA43                     349              ADD.W       D3,D5             ; start bit + leftShift = X
+000011AA  EA6A                     350              LSR.W       D5,D2
+000011AC                           351              
+000011AC  4283                     352              CLR.L       D3
+000011AE  4284                     353              CLR.L       D4
+000011B0  4285                     354              CLR.L       D5   
+000011B2  4E75                     355              RTS
+000011B4                           356  
+000011B4                           357  *-----------------------------------------------------------
+000011B4                           358  * OpCode Implementation
+000011B4                           359  ;
+000011B4                           360  *-----------------------------------------------------------
+000011B4                           361  
+000011B4                           362  ;MOVE
+000011B4                           363  M00:
+000011B4  43F9 00001614            364              LEA        printMOVE,A1
+000011BA  103C 000E                365              MOVE.B     #14,D0
+000011BE  4E4F                     366              TRAP       #15
+000011C0                           367              
+000011C0  4202                     368              CLR.B      D2
+000011C2  4203                     369              CLR.B      D3
+000011C4                           370              
+000011C4                           371              
+000011C4  60CC                     372              BRA        update
+000011C6                           373            
+000011C6                           374  
+000011C6                           375  ;MOVEM,LEA,NOT,JSR
+000011C6                           376  M0100:      
+000011C6  4282                     377              CLR.L       D2
+000011C8  4283                     378              CLR.L       D3
+000011CA                           379              
+000011CA                           380              ;Copy the address values into a register to check for LEA
+000011CA  3412                     381              MOVE.W     (A2),D2
+000011CC                           382              
+000011CC                           383              ;Passing in parameters for isolating bits 6,7,8
+000011CC  163C 0006                384              MOVE.B      #6,D3             ;Start bit index = 6
+000011D0  183C 0003                385              MOVE.B      #3,D4             ;Number of bits needed = 3
+000011D4                           386              
+000011D4                           387              ;Jumps to getBits and returns with isolated bits in D2
+000011D4  61C8                     388              BSR         getBits
+000011D6                           389  
+000011D6  B43C 0007                390              CMP.B       #%111,D2
+000011DA  6700 0018                391              BEQ         MLEA
+000011DE                           392  
+000011DE                           393              ;Clear D2 and recopy it to check for NOT
+000011DE  4282                     394              CLR.L       D2
+000011E0  3412                     395              MOVE.W      (A2),D2
+000011E2                           396              
+000011E2                           397              ;Pass in parameters for isolating bits 11,10,9,8
+000011E2  163C 0008                398              MOVE.B      #8,D3
+000011E6  183C 0004                399              MOVE.B      #4,D4
+000011EA                           400              
+000011EA                           401              ;Jumps to getBits and returns with isolated bits in D2
+000011EA  61B2                     402              BSR         getBits
+000011EC                           403              
+000011EC  B43C 0006                404              CMP.B       #%0110,D2
+000011F0  6700 0032                405              BEQ         MNOT      
+000011F4                           406              
+000011F4                           407              ;Check for MOVEM and JSR later
+000011F4                           408              ;-----------------------------
+000011F4                           409         
+000011F4                           410  MOVEM:
+000011F4                           411  
+000011F4                           412  MLEA:
+000011F4  43F9 00001641            413              LEA         printLEA,A1
+000011FA  103C 000E                414              MOVE.B      #14,D0
+000011FE  4E4F                     415              TRAP        #15
+00001200                           416              
+00001200                           417              ;*SOURCE*
+00001200                           418              ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
+00001200                           419              ;D6 will contain mode & D7 will contain the register after this instruction
+00001200  6100 01B2                420              BSR         isolateAddressBit0to5
+00001204                           421              
+00001204                           422              ;*Print source address*
+00001204  6100 0246                423              BSR         addressModeSR
+00001208                           424              
+00001208                           425              ;Print comma after source address
+00001208  43F9 00001677            426              LEA         printComma,A1
+0000120E  103C 000E                427              MOVE.B      #14,D0
+00001212  4E4F                     428              TRAP        #15
+00001214                           429              
+00001214                           430              ;*DESTINATION*
+00001214                           431              ;Jumps to helper subroutine to isolates and return the register stored in bits 9 - 11
+00001214                           432              ;D7 will contain the register after this instruction
+00001214  6100 01C4                433              BSR         isolateRegisterBit9to11
+00001218                           434              
+00001218                           435              ;Save #%001 into D6 to specify address register mode
+00001218  1C3C 0001                436              MOVE.B      #1,D6
+0000121C                           437              
+0000121C                           438              
+0000121C                           439              ;*Print destination address*
+0000121C  6100 022E                440              BSR         addressModeSR
+00001220                           441  
+00001220  6000 FF70                442              BRA        update
+00001224                           443  
+00001224                           444  MNOT:
+00001224  43F9 00001648            445              LEA        printNOT,A1
+0000122A  103C 000E                446              MOVE.B     #14,D0
+0000122E  4E4F                     447              TRAP       #15
+00001230                           448              
+00001230                           449              ;We want 7-6
+00001230  4282                     450              CLR.L      D2
+00001232                           451              ;Move the address into the register to check for size
+00001232  3412                     452              MOVE.W     (A2),D2
+00001234                           453              
+00001234                           454              ;Pass in parameters for isolating bits 6,7
+00001234  163C 0006                455              MOVE.B     #6,D3
+00001238  183C 0002                456              MOVE.B     #2,D4
+0000123C                           457              
+0000123C                           458              ;Jump to getbits and return with isolated bits
+0000123C  6100 FF60                459              BSR        getbits          
+00001240                           460              
+00001240                           461              ;Jumps to printSizeSubroutine and returns after size has been printed
+00001240  6100 01B0                462              BSR        printSizeSubroutine
+00001244                           463              
+00001244                           464              ;*SOURCE*
+00001244                           465              ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
+00001244                           466              ;D6 will contain mode & D7 will contain the register after this instruction
+00001244  6100 016E                467              BSR         isolateAddressBit0to5
+00001248                           468              
+00001248                           469              ;*Print source address*
+00001248  6100 0202                470              BSR         addressModeSR
+0000124C                           471              
+0000124C  6000 FF44                472              BRA        update 
+00001250                           473  
+00001250                           474  MJSR:
+00001250                           475     
+00001250                           476  
+00001250                           477  ;BRA,BLT,BGE,BEQ         
+00001250                           478  M0110:
+00001250                           479              ;
+00001250                           480  MBRA:
+00001250                           481  MBLT:
+00001250                           482  MBGE:
+00001250                           483  MBEQ:            
+00001250                           484              
+00001250                           485  ;DIVU            
+00001250                           486  M1000:
+00001250                           487              
+00001250  4282                     488              CLR.L       D2
+00001252  4283                     489              CLR.L       D3
+00001254                           490              
+00001254                           491              ;Copy the address values into a register
+00001254  3412                     492              MOVE.W     (A2),D2
+00001256                           493              
+00001256                           494              ;Passing in parameters for isolating bits 6,7,8
+00001256  163C 0006                495              MOVE.B      #6,D3             ;Start bit index = 6
+0000125A  183C 0003                496              MOVE.B      #3,D4             ;Number of bits needed = 3
+0000125E                           497              
+0000125E                           498              ;Jumps to getBits and returns with isolated bits in D2
+0000125E  6100 FF3E                499              BSR         getBits
+00001262                           500              
+00001262                           501              ;If bits 6,7,8 are #%011, then it's DIVU. Otherwise, branch to error message
+00001262  B4BC 00000003            502              CMP.L       #%011,D2
+00001268  6700 0002                503              BEQ         continueDIVU
+0000126C                           504              
+0000126C                           505              ;************TO DO: BRANCH TO ERROR MESSAGE IF NOT DIVU**************
+0000126C                           506  
+0000126C                           507  continueDIVU:
+0000126C                           508  
+0000126C  43F9 00001637            509              LEA         printDIVU,A1
+00001272  103C 000E                510              MOVE.B      #14,D0
+00001276  4E4F                     511              TRAP        #15
+00001278                           512              
+00001278  6000 00F2                513              BRA         dnDest
+0000127C                           514              
+0000127C                           515              
+0000127C                           516  
+0000127C                           517  ;SUB
+0000127C                           518  M1001:
+0000127C  43F9 00001621            519              LEA        printSUB,A1
+00001282  103C 000E                520              MOVE.B     #14,D0
+00001286  4E4F                     521              TRAP       #15
+00001288                           522              
+00001288  4202                     523              CLR.B      D2
+0000128A  4203                     524              CLR.B      D3
+0000128C                           525              
+0000128C                           526              ;======Isolate Size (S) Bits=======
+0000128C                           527              ;Copy the address values into a register
+0000128C  3412                     528              MOVE.W     (A2),D2
+0000128E                           529              
+0000128E                           530              ;Passing in parameters for isolating size bits
+0000128E  163C 0006                531              MOVE.B      #6,D3             ;Start bit index = 6
+00001292  183C 0002                532              MOVE.B      #2,D4             ;Number of bits needed = 2
+00001296                           533              
+00001296                           534              ;Jumps to getBits and returns with isolated bits in D2
+00001296  6100 FF06                535              BSR         getBits  
+0000129A                           536              
+0000129A                           537              ;Jumps to printSizeSubroutine and returns after size has been printed
+0000129A  6100 0156                538              BSR         printSizeSubroutine
+0000129E                           539              
+0000129E                           540         
+0000129E                           541              ;======Isolate direction (D) Bit=======
+0000129E                           542              ; 0 = data register is destination | 1 = Dn is source
+0000129E  4282                     543              CLR.L       D2
+000012A0                           544              
+000012A0                           545              ;Copy the address values into a register
+000012A0  3412                     546              MOVE.W      (A2),D2
+000012A2                           547              
+000012A2                           548              ;Passing in parameters for isolating direction bit
+000012A2  163C 0008                549              MOVE.B      #8,D3             ;Start bit index = 8
+000012A6  183C 0001                550              MOVE.B      #1,D4             ;Number of bits needed = 1
+000012AA                           551              
+000012AA                           552              ;Jumps to getBits and returns with isolated bit in D2
+000012AA  6100 FEF2                553              BSR         getBits
+000012AE                           554              
+000012AE                           555              ;Uses direction bit to see if Dn is the destination. Important because it determines the order in which we isolate and print the addressing bits.
+000012AE  B43C 0000                556              CMP.B       #0,D2
+000012B2  6700 00B8                557              BEQ         dnDest
+000012B6  6000 00D8                558              BRA         dnSource
+000012BA                           559  
+000012BA                           560  
+000012BA                           561  ;===================OLD VERSION====================
+000012BA                           562  ;;MULS,AND,LSL,LSR,ASL,ASR
+000012BA                           563  ;M1100:
+000012BA                           564  
+000012BA                           565  ;MMULS:
+000012BA                           566  ;MAND:
+000012BA                           567  ;MLSL:
+000012BA                           568  ;MLSR:
+000012BA                           569  ;MASL:
+000012BA                           570  ;MASR:
+000012BA                           571  ;==================================================
+000012BA                           572  
+000012BA                           573  ;MULS,AND
+000012BA                           574  M1100:      
+000012BA  4282                     575              CLR.L       D2
+000012BC  4283                     576              CLR.L       D3
+000012BE                           577              
+000012BE                           578              ;Copy the address values into a register
+000012BE  3412                     579              MOVE.W     (A2),D2
+000012C0                           580              
+000012C0                           581              ;Passing in parameters for isolating bits 6 and 7
+000012C0  163C 0006                582              MOVE.B      #6,D3             ;Start bit index = 6
+000012C4  183C 0002                583              MOVE.B      #2,D4             ;Number of bits needed = 2
+000012C8                           584              
+000012C8                           585              ;Jumps to getBits and returns with isolated bits in D2
+000012C8  6100 FED4                586              BSR         getBits  
+000012CC                           587              
+000012CC                           588              ;If bits 6 & 7 are not #%11 then the opcode is MAND. If they are, then check 8th bit to determine if its MULS
+000012CC  B43C 0003                589              CMP.B       #%11,D2
+000012D0  6700 0006                590              BEQ         mulsCheck
+000012D4  6000 0028                591              BRA         MAND
+000012D8                           592              
+000012D8                           593  mulsCheck:
+000012D8                           594              ;Copy the address values into a register
+000012D8  3412                     595              MOVE.W     (A2),D2
+000012DA                           596              
+000012DA                           597              ;Passing in parameters for isolating bit 8
+000012DA  163C 0008                598              MOVE.B      #8,D3             ;Start bit index = 8
+000012DE  183C 0001                599              MOVE.B      #1,D4             ;Number of bits needed = 1
+000012E2                           600              
+000012E2                           601              ;Jumps to getBits and returns with isolated bits in D2
+000012E2  6100 FEBA                602              BSR         getBits 
+000012E6                           603              
+000012E6                           604              ;If 8th bit is 1 then branch to MULS. Otherwise, print error
+000012E6  B43C 0001                605              CMP.B       #1,D2
+000012EA  6700 0002                606              BEQ         MMULS
+000012EE                           607              
+000012EE                           608              ;************TO DO: BRANCH TO ERROR MESSAGE IF NOT MULS**************
+000012EE                           609  
+000012EE                           610              
+000012EE                           611              
+000012EE                           612              
+000012EE                           613  MMULS:
+000012EE  43F9 0000162D            614              LEA         printMULS,A1
+000012F4  103C 000E                615              MOVE.B      #14,D0
+000012F8  4E4F                     616              TRAP        #15
+000012FA                           617              
+000012FA  6000 0070                618              BRA         dnDest 
+000012FE                           619  
+000012FE                           620  
+000012FE                           621  MAND:
+000012FE  43F9 00001627            622              LEA        printAND,A1
+00001304  103C 000E                623              MOVE.B     #14,D0
+00001308  4E4F                     624              TRAP       #15
+0000130A                           625              
+0000130A                           626              ;D2 already contains the size bits for AND (bits 6,7) so no need for isolating again
+0000130A                           627              ;Jumps to printSizeSubroutine and returns after size has been printed
+0000130A  6100 00E6                628              BSR         printSizeSubroutine
+0000130E                           629              
+0000130E                           630              ;======Isolate direction (D) Bit=======
+0000130E                           631              ; 0 = data register is destination | 1 = Dn is source
+0000130E  4282                     632              CLR.L       D2
+00001310                           633              
+00001310                           634              ;Copy the address values into a register
+00001310  3412                     635              MOVE.W      (A2),D2
+00001312                           636              
+00001312                           637              ;Passing in parameters for isolating direction bit
+00001312  163C 0008                638              MOVE.B      #8,D3           ;Start bit index = 8
+00001316  183C 0001                639              MOVE.B      #1,D4           ;Number of bits needed = 1
+0000131A                           640  
+0000131A                           641              ;Jumps to getBits and returns with isolated bit in D2
+0000131A  6100 FE82                642              BSR         getBits
+0000131E                           643              
+0000131E                           644              ;Uses direction bit to see if Dn is the destination. Important because it determines the order in which we isolate and print the addressing bits.
+0000131E  B43C 0000                645              CMP.B       #0,D2
+00001322  6700 0048                646              BEQ         dnDest
+00001326  6000 0068                647              BRA         dnSource
+0000132A                           648              
+0000132A                           649              
+0000132A  6000 FE66                650              BRA         update          ;Unnecessary with current implementation. dnDest & dnSource will call it instead
+0000132E                           651     
+0000132E                           652     
+0000132E                           653  *-----------------------------------------------------------------------
+0000132E                           654  *-----------------------------------------------------------------------
+0000132E                           655  *-----------------------------------------------------------------------
+0000132E                           656  ;LSL,LSR,ASL,ASR
+0000132E                           657  M1110:
+0000132E                           658  
+0000132E                           659  MLSL:
+0000132E                           660  MLSR:
+0000132E                           661  MASL:
+0000132E                           662  MASR:
+0000132E                           663  *-----------------------------------------------------------------------
+0000132E                           664  *-----------------------------------------------------------------------
+0000132E                           665  *-----------------------------------------------------------------------
+0000132E                           666  
+0000132E                           667  
+0000132E                           668  
+0000132E                           669  
+0000132E                           670  ;ADD
+0000132E                           671  M1101:
+0000132E  43F9 0000161B            672              LEA        printADD,A1
+00001334  103C 000E                673              MOVE.B     #14,D0
+00001338  4E4F                     674              TRAP       #15
+0000133A                           675              
+0000133A  4202                     676              CLR.B      D2
+0000133C  4203                     677              CLR.B      D3
+0000133E                           678              
+0000133E                           679              ;======Isolate Size (S) Bits=======
+0000133E                           680              ;Copy the address values into a register
+0000133E  3412                     681              MOVE.W     (A2),D2
+00001340                           682              
+00001340                           683              ;Passing in parameters for isolating size bits
+00001340  163C 0006                684              MOVE.B      #6,D3             ;Start bit index = 6
+00001344  183C 0002                685              MOVE.B      #2,D4             ;Number of bits needed = 2
+00001348                           686              
+00001348                           687              ;Jumps to getBits and returns with isolated bits in D2
+00001348  6100 FE54                688              BSR         getBits  
+0000134C                           689              
+0000134C                           690              ;Jumps to printSizeSubroutine and returns after size has been printed
+0000134C  6100 00A4                691              BSR         printSizeSubroutine
+00001350                           692         
+00001350                           693              ;======Isolate direction (D) Bit=======
+00001350                           694              ; 0 = data register is destination | 1 = Dn is source
+00001350  4282                     695              CLR.L       D2
+00001352                           696              
+00001352                           697              ;Copy the address values into a register
+00001352  3412                     698              MOVE.W      (A2),D2
+00001354                           699              
+00001354                           700              ;Passing in parameters for isolating direction bit
+00001354  163C 0008                701              MOVE.B      #8,D3             ;Start bit index = 8
+00001358  183C 0001                702              MOVE.B      #1,D4             ;Number of bits needed = 1
+0000135C                           703              
+0000135C                           704              ;Jumps to getBits and returns with isolated bit in D2
+0000135C  6100 FE40                705              BSR         getBits
+00001360                           706              
+00001360                           707              ;Uses direction bit to see if Dn is the destination. Important because it determines the order in which we isolate and print the addressing bits.
+00001360  B43C 0000                708              CMP.B       #0,D2
+00001364  6700 0006                709              BEQ         dnDest
+00001368  6000 0026                710              BRA         dnSource
+0000136C                           711              
+0000136C                           712  
+0000136C                           713  *-----------------------------------------------------------------
+0000136C                           714  * dnDest, dnSource, & other subroutines for isolating address bits
+0000136C                           715  *-----------------------------------------------------------------
+0000136C                           716  ;* dnDest,dnSource *
+0000136C                           717  ;For: MULS,AND,ADD,SUB,DIVU
+0000136C                           718  ;Used by instructions that require Dn as one of their addressing modes.
+0000136C                           719  ;dnDest isolates the addressing bits with Dn being the destination address
+0000136C                           720  ;dnSource isolates the addressing bits with Dn being the source address
+0000136C                           721  
+0000136C                           722  dnDest:
+0000136C                           723              ;**Used for isolating addressing bits when Dn is the destination**
+0000136C                           724              
+0000136C                           725              ;*SOURCE*
+0000136C                           726              ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
+0000136C                           727              ;D6 will contain mode & D7 will contain the register after this instruction
+0000136C  6100 0046                728              BSR         isolateAddressBit0to5
+00001370                           729              
+00001370                           730              ;*Print source address*
+00001370  6100 00DA                731              BSR         addressModeSR
+00001374                           732              
+00001374                           733              ;Print comma after source address
+00001374  43F9 00001677            734              LEA         printComma,A1
+0000137A  103C 000E                735              MOVE.B      #14,D0
+0000137E  4E4F                     736              TRAP        #15
+00001380                           737              
+00001380                           738              ;*DESTINATION*
+00001380                           739              ;Jumps to helper subroutine to isolates and return the register stored in bits 9 - 11
+00001380                           740              ;D7 will contain the register after this instruction
+00001380  6100 0058                741              BSR         isolateRegisterBit9to11
+00001384                           742              
+00001384                           743              ;Save #%000 into D6 to specify data register mode
+00001384  1C3C 0000                744              MOVE.B      #0,D6
+00001388                           745              
+00001388                           746              ;*Print destination address*
+00001388  6100 00C2                747              BSR         addressModeSR
+0000138C                           748  
+0000138C  6000 FE04                749              BRA         update
+00001390                           750              
+00001390                           751  dnSource:
+00001390                           752              ;**Used for isolating addressing bits when Dn is the destination**
+00001390                           753                          
+00001390                           754              ;*SOURCE*
+00001390                           755              ;Jumps to helper subroutine to isolates and return the register stored in bits 9 - 11
+00001390                           756              ;D7 will contain the register after this instruction
+00001390  6100 0048                757              BSR         isolateRegisterBit9to11
+00001394                           758              
+00001394                           759              ;Save #%000 into D6 to specify data register mode
+00001394  1C3C 0000                760              MOVE.B      #0,D6
+00001398                           761              
+00001398                           762              ;*Print Source address*
+00001398  6100 00B2                763              BSR         addressModeSR
+0000139C                           764              
+0000139C                           765              ;Print comma after source address
+0000139C  43F9 00001677            766              LEA         printComma,A1
+000013A2  103C 000E                767              MOVE.B      #14,D0
+000013A6  4E4F                     768              TRAP        #15
+000013A8                           769              
+000013A8                           770              ;*DESTINATION*
+000013A8                           771              ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
+000013A8                           772              ;D6 will contain mode & D7 will contain the register after this instruction
+000013A8  6100 000A                773              BSR         isolateAddressBit0to5
+000013AC                           774              
+000013AC                           775              ;*Print destination address*
+000013AC  6100 009E                776              BSR         addressModeSR
+000013B0                           777  
+000013B0  6000 FDE0                778              BRA         update
+000013B4                           779                     
+000013B4                           780  isolateAddressBit0to5:
+000013B4                           781  ;Helper subroutine for isolating the address stored within bits 0-5
+000013B4                           782  ;Stores address mode in D6
+000013B4                           783  ;Stores address register in D7
+000013B4                           784  
+000013B4                           785              ;======Isolate Effective Address Mode (M) Bits=======
+000013B4  4282                     786              CLR.L       D2
+000013B6                           787              
+000013B6                           788              ;Copy the address values into a register
+000013B6  3412                     789              MOVE.W      (A2),D2
+000013B8                           790              
+000013B8                           791              ;Passing in parameters for isolating Mode bits
+000013B8  163C 0003                792              MOVE.B      #3,D3             ;Start bit index = 3
+000013BC  183C 0003                793              MOVE.B      #3,D4             ;Number of bits needed = 3
+000013C0                           794              
+000013C0                           795              ;Jumps to getBits and returns with isolated bits in D2
+000013C0  4EB8 119E                796              JSR         getBits
+000013C4                           797              
+000013C4                           798              ;Save M bit into ***D6*** for later use in addressModeSubroutine
+000013C4  1C02                     799              MOVE.B      D2,D6
+000013C6                           800              
+000013C6                           801                       
+000013C6                           802              ;======Isolate Effective Address Register (Xn) Bits=======
+000013C6  4282                     803              CLR.L       D2
+000013C8                           804              
+000013C8                           805              ;Copy the address values into a register
+000013C8  3412                     806              MOVE.W      (A2),D2
+000013CA                           807              
+000013CA                           808              ;Passing in parameters for isolating Xn bits
+000013CA  163C 0000                809              MOVE.B      #0,D3             ;Start bit index = 0
+000013CE  183C 0003                810              MOVE.B      #3,D4             ;Number of bits needed = 3
+000013D2                           811              
+000013D2                           812              ;Jumps to getBits and returns with isolated bits in D2
+000013D2  6100 FDCA                813              BSR         getBits
+000013D6                           814              
+000013D6                           815              ;Save Xn register bit into ***D7*** for later use in addressModeSR
+000013D6  1E02                     816              MOVE.B      D2,D7
+000013D8                           817              
+000013D8  4E75                     818              RTS
+000013DA                           819  
+000013DA                           820  isolateRegisterBit9to11:
+000013DA                           821  ;Helper subroutine for isolating the register stored within bits 9-11
+000013DA                           822  ;Stores the address register in D7
+000013DA                           823  
+000013DA                           824              ;======Isolate Register Bits=======
+000013DA  4282                     825              CLR.L       D2
+000013DC  4286                     826              CLR.L       D6
+000013DE  4287                     827              CLR.L       D7
+000013E0                           828              
+000013E0                           829              ;Copy the address values into a register
+000013E0  3412                     830              MOVE.W      (A2),D2
+000013E2                           831              
+000013E2                           832              ;Passing in parameters for isolating register bits
+000013E2  163C 0009                833              MOVE.B      #9,D3             ;Start bit index = 9
+000013E6  183C 0003                834              MOVE.B      #3,D4             ;Number of bits needed = 3
+000013EA                           835              
+000013EA                           836              ;Jumps to getBits and returns with isolated bit in D2
+000013EA  6100 FDB2                837              BSR         getBits
+000013EE                           838              
+000013EE                           839              ;Save register bit into ***D7*** for later use in addressModeSR
+000013EE  1E02                     840              MOVE.B      D2,D7
+000013F0                           841  
+000013F0  4E75                     842              RTS
+000013F2                           843              
+000013F2                           844  *-----------------------------------------------------------
+000013F2                           845  * Print Sizes
+000013F2                           846  *-----------------------------------------------------------
+000013F2                           847  printSizeSubroutine:
+000013F2                           848              ;Prints the apporpriate size
+000013F2                           849              ;PARAMETER:
+000013F2                           850              ;D2 = the size bits
+000013F2                           851              
+000013F2                           852              ;Compare to which size is being moved for the opcode
+000013F2  B43C 0000                853              CMP.B      #%00,D2
+000013F6  6700 001A                854              BEQ        PByte
+000013FA                           855              
+000013FA  B43C 0001                856              CMP.B      #%01,D2
+000013FE  6700 0020                857              BEQ        PWord
+00001402                           858              
+00001402  B43C 0002                859              CMP.B      #%10,D2
+00001406  6700 0026                860              BEQ        PLong
+0000140A                           861              
+0000140A  B43C 0003                862              CMP.B      #%11,D2
+0000140E  6700 002C                863              BEQ        sError
+00001412                           864           
+00001412                           865             
+00001412                           866  PByte:
+00001412  43F9 0000164E            867              LEA        printSIZEB,A1
+00001418  103C 000E                868              MOVE.B     #14,D0
+0000141C  4E4F                     869              TRAP       #15
+0000141E                           870              
+0000141E  4E75                     871              RTS
+00001420                           872  PWord:
+00001420  43F9 00001652            873              LEA        printSIZEW,A1
+00001426  103C 000E                874              MOVE.B     #14,D0
+0000142A  4E4F                     875              TRAP       #15
+0000142C                           876              
+0000142C  4E75                     877              RTS
+0000142E                           878  PLong:            
+0000142E  43F9 00001658            879              LEA        printSIZEL,A1
+00001434  103C 000E                880              MOVE.B     #14,D0
+00001438  4E4F                     881              TRAP       #15
+0000143A                           882              
+0000143A  4E75                     883              RTS
+0000143C                           884              
+0000143C                           885  sError:            
+0000143C  43F9 0000176A            886              LEA        sizeError,A1
+00001442  103C 000E                887              MOVE.B     #14,D0
+00001446  4E4F                     888              TRAP       #15
+00001448                           889              
+00001448  6000 FD48                890              BRA        update
+0000144C                           891  *-----------------------------------------------------------
+0000144C                           892  * Addressing Mode Implementation
+0000144C                           893  *-----------------------------------------------------------
+0000144C                           894  addressModeSR:
+0000144C                           895              ;Prints address according to the parameters passed in
+0000144C                           896              ;PARAMETERS:
+0000144C                           897              ;D6 = mode
+0000144C                           898              ;D7 = register
+0000144C                           899  
+0000144C  BC3C 0000                900              CMP.B       #%000,D6
+00001450  6700 0022                901              BEQ         DRD
+00001454                           902              
+00001454  BC3C 0001                903              CMP.B       #%001,D6
+00001458  6700 002E                904              BEQ         ARD
+0000145C                           905              
+0000145C  BC3C 0002                906              CMP.B       #%010,D6
+00001460  6700 003A                907              BEQ         ARI
+00001464                           908              
+00001464  BC3C 0003                909              CMP.B       #%011,D6
+00001468  6700 0052                910              BEQ         PI
+0000146C                           911              
+0000146C  BC3C 0004                912              CMP.B       #%100,D6
+00001470  6700 006A                913              BEQ         PD
+00001474                           914  DRD:
+00001474                           915              ;Print D __
+00001474  43F9 00001660            916              LEA         printDRD,A1
+0000147A  103C 000E                917              MOVE.B      #14,D0
+0000147E  4E4F                     918              TRAP        #15
+00001480                           919              
+00001480                           920              ;Print register number
+00001480  7003                     921              MOVE.L      #3,D0
+00001482  2207                     922              MOVE.L      D7,D1
+00001484  4E4F                     923              TRAP        #15
+00001486                           924              
+00001486  4E75                     925              RTS
+00001488                           926  ARD:
+00001488                           927              ;Print A __
+00001488  43F9 00001662            928              LEA         printARD,A1
+0000148E  103C 000E                929              MOVE.B      #14,D0
+00001492  4E4F                     930              TRAP        #15
+00001494                           931              
+00001494                           932              ;Print register number
+00001494  7003                     933              MOVE.L      #3,D0
+00001496  2207                     934              MOVE.L      D7,D1
+00001498  4E4F                     935              TRAP        #15
+0000149A                           936              
+0000149A  4E75                     937              RTS
+0000149C                           938  ARI:
+0000149C                           939              ;Print (A __ )
+0000149C  43F9 00001664            940              LEA         printARI,A1
+000014A2  103C 000E                941              MOVE.B      #14,D0
+000014A6  4E4F                     942              TRAP        #15
+000014A8                           943              
+000014A8                           944              ;Print register number
+000014A8  7003                     945              MOVE.L      #3,D0
+000014AA  2207                     946              MOVE.L      D7,D1
+000014AC  4E4F                     947              TRAP        #15
+000014AE                           948              
+000014AE                           949              ;Print closing ')'
+000014AE  43F9 00001667            950              LEA         printARI2,A1
+000014B4  103C 000E                951              MOVE.B      #14,D0
+000014B8  4E4F                     952              TRAP        #15
+000014BA                           953              
+000014BA  4E75                     954              RTS
+000014BC                           955  PI:
+000014BC                           956              ;Print (A __)+
+000014BC  43F9 0000166B            957              LEA         printPI,A1
+000014C2  103C 000E                958              MOVE.B      #14,D0
+000014C6  4E4F                     959              TRAP        #15
+000014C8                           960              
+000014C8                           961              ;Print register number
+000014C8  7003                     962              MOVE.L      #3,D0
+000014CA  2207                     963              MOVE.L      D7,D1
+000014CC  4E4F                     964              TRAP        #15
+000014CE                           965              
+000014CE                           966              ;Print closing ')+'
+000014CE  43F9 0000166E            967              LEA         printPI2,A1
+000014D4  103C 000E                968              MOVE.B      #14,D0
+000014D8  4E4F                     969              TRAP        #15
+000014DA                           970              
+000014DA  4E75                     971              RTS
+000014DC                           972  PD:
+000014DC                           973              ;Print -(A __)
+000014DC  43F9 00001671            974              LEA         printPD,A1
+000014E2  103C 000E                975              MOVE.B      #14,D0
+000014E6  4E4F                     976              TRAP        #15
+000014E8                           977              
+000014E8                           978              ;Print register number
+000014E8  7003                     979              MOVE.L      #3,D0
+000014EA  2207                     980              MOVE.L      D7,D1
+000014EC  4E4F                     981              TRAP        #15
+000014EE                           982              
+000014EE                           983              ;Print closing ')'
+000014EE  43F9 00001675            984              LEA         printPD2,A1
+000014F4  103C 000E                985              MOVE.B      #14,D0
+000014F8  4E4F                     986              TRAP        #15
+000014FA                           987              
+000014FA  4E75                     988              RTS
+000014FC                           989  IA:
+000014FC                           990              ;Print #$ ______
+000014FC  4E75                     991              RTS
+000014FE                           992  ALA:
+000014FE                           993              ;Print $-------- (8 digits)
+000014FE  4E75                     994              RTS
+00001500                           995  AWA:
+00001500                           996              ;Print $---- (4 digits)
+00001500  4E75                     997              RTS
+00001502                           998  
+00001502                           999  
+00001502                          1000  *-----------------------------------------------------------
+00001502                          1001  * Print Instructions
+00001502                          1002  *-----------------------------------------------------------
+00001502                          1003  printN:
+00001502  43F9 00001608           1004              LEA        printNOP,A1
+00001508  103C 000E               1005              MOVE.B     #14,D0
+0000150C  4E4F                    1006              TRAP       #15
+0000150E                          1007              
+0000150E  6000 FC82               1008              BRA        update
+00001512                          1009  
+00001512                          1010  printR:
+00001512  43F9 0000160E           1011              LEA        printRTS,A1
+00001518  103C 000E               1012              MOVE.B     #14,D0
+0000151C  4E4F                    1013              TRAP       #15
+0000151E                          1014              
+0000151E  6000 FC72               1015              BRA        update
+00001522                          1016  ;-----------------------------------------------------------
+00001522                          1017  ;ERROR MESSAGES FOR I/O portion
+00001522                          1018  ;-----------------------------------------------------------
+00001522                          1019  charError:
+00001522                          1020              
+00001522  43F9 0000169C           1021              LEA         invalCh,A1
+00001528  103C 000E               1022              MOVE.B      #14,D0
+0000152C  4E4F                    1023              TRAP        #15
+0000152E                          1024              
+0000152E  6000 FAE8               1025              BRA         startingPrompt
+00001532                          1026            
+00001532                          1027  oddError:
+00001532  43F9 000016BD           1028              LEA         odd,A1
+00001538  103C 000E               1029              MOVE.B      #14,D0
+0000153C  4E4F                    1030              TRAP        #15
+0000153E                          1031              
+0000153E  6000 FAD8               1032              BRA         startingPrompt
+00001542                          1033              
+00001542                          1034  manyCharError:  
+00001542  43F9 000016EA           1035              LEA         manyChar, A1
+00001548  103C 000E               1036              MOVE.B      #14,D0
+0000154C  4E4F                    1037              TRAP        #15
+0000154E                          1038              
+0000154E  6000 FAC8               1039              BRA         startingPrompt
+00001552                          1040           
+00001552                          1041  endGreater:
+00001552  43F9 00001725           1042              LEA         endG,A1
+00001558  103C 000E               1043              MOVE.B      #14,D0
+0000155C  4E4F                    1044              TRAP        #15
+0000155E                          1045              
+0000155E  6000 FAB8               1046              BRA         startingPrompt
+00001562                          1047      
+00001562                          1048  ;-----------------------------------------------------------
+00001562                          1049  ;MESSAGES
+00001562                          1050  ;-----------------------------------------------------------
+00001562= 57 65 6C 63 6F 6D ...   1051  Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
+00001586= 50 6C 65 61 73 65 ...   1052  userSA      DC.B        'Please enter your starting hex address (Only uppercase letters)',CR,LF,0
+000015C8= 50 6C 65 61 73 65 ...   1053  userEA      DC.B        'Please enter your ending hex address (Only uppercase letters)',CR,LF,0
+00001608                          1054  
+00001608= 0D 0A 4E 4F 50 00       1055  printNOP    DC.B        CR,LF,'NOP',0
+0000160E= 0D 0A 52 54 53 00       1056  printRTS    DC.B        CR,LF,'RTS',0
+00001614= 0D 0A 4D 4F 56 45 00    1057  printMOVE   DC.B        CR,LF,'MOVE',0
+0000161B= 0D 0A 41 44 44 00       1058  printADD    DC.B        CR,LF,'ADD',0
+00001621= 0D 0A 53 55 42 00       1059  printSUB    DC.B        CR,LF,'SUB',0
+00001627= 0D 0A 41 4E 44 00       1060  printAND    DC.B        CR,LF,'AND',0
+0000162D= 0D 0A 4D 55 4C 53 ...   1061  printMULS   DC.B        CR,LF,'MULS.W ',0
+00001637= 0D 0A 44 49 56 55 ...   1062  printDIVU   DC.B        CR,LF,'DIVU.W ',0
+00001641= 0D 0A 4C 45 41 20 00    1063  printLEA    DC.B        CR,LF,'LEA ',0
+00001648= 0D 0A 4E 4F 54 00       1064  printNOT    DC.B        CR,LF,'NOT',0
+0000164E                          1065  
+0000164E                          1066  
+0000164E                          1067  
+0000164E= 2E 42 20 00             1068  printSIZEB   DC.B        '.B ',0
+00001652= 2E57 2000 0000          1069  printSIZEW   DC.W        '.W ',0
+00001658= 2E4C2000 00000000       1070  printSIZEL   DC.L        '.L ',0
+00001660                          1071  
+00001660                          1072  
+00001660= 44 00                   1073  printDRD      DC.B        'D',0
+00001662= 41 00                   1074  printARD      DC.B        'A',0
+00001664= 28 41 00                1075  printARI      DC.B        '(A',0
+00001667= 29 00                   1076  printARI2     DC.B        ')',0
+00001669= 23 00                   1077  printIA       DC.B        '#',0
+0000166B= 28 41 00                1078  printPI       DC.B        '(A',0
+0000166E= 29 2B 00                1079  printPI2      DC.B        ')+',0
+00001671= 2D 28 41 00             1080  printPD       DC.B        '-(A',0
+00001675= 29 00                   1081  printPD2      DC.B        ')',0
+00001677                          1082  ;printAA       DC.B        ''   /TBD
+00001677                          1083  
+00001677= 2C 00                   1084  printComma    DC.B        ',',0
+00001679= 20 00                   1085  printSpace    DC.B        ' ',0
+0000167B                          1086  
+0000167B= 0D 0A 59 6F 75 20 ...   1087  theEnd      DC.B        CR,LF,'You are now ending the program',0
+0000169C                          1088  
+0000169C                          1089  ;-----------------------------------------------------------
+0000169C                          1090  ;ERRORS
+0000169C                          1091  ;-----------------------------------------------------------
+0000169C= 45 52 52 4F 52 3A ...   1092  invalCh     DC.B        'ERROR: Invalid Characters used',CR,LF,0
+000016BD= 45 52 52 4F 52 3A ...   1093  odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
+000016EA= 45 52 52 4F 52 3A ...   1094  manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the address',CR,LF,0
+00001725= 45 52 52 4F 52 3A ...   1095  endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
+0000176A= 45 52 52 4F 52 3A ...   1096  sizeError   DC.B        'ERROR: Invalid size instruction',0
+0000178A                          1097  
+0000178A                          1098  ending:
+0000178A  43F8 167B               1099              LEA         theEnd,A1
+0000178E  303C 000E               1100              MOVE        #14,D0
+00001792  4E4F                    1101              TRAP        #15
+00001794                          1102              
+00001794                          1103              END         MAIN 
 
 No errors detected
 No warnings generated
@@ -602,79 +1113,101 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-ALA                 1230
-ARD                 1230
-ARI                 1230
-AWA                 1230
-CHARERROR           1250
-CONVERT             106A
+ADDRESSMODESR       144C
+ALA                 14FE
+ARD                 1488
+ARI                 149C
+AWA                 1500
+CHARERROR           1522
+CONTINUEDIVU        126C
+CONVERT             106C
 CR                  D
-DRD                 1230
-ENDG                141C
-ENDGREATER          1280
+DNDEST              136C
+DNSOURCE            1390
+DRD                 1474
+ENDG                1725
+ENDGREATER          1552
 ENDHEX              1004
-ENDING              1461
-ENDINGPROMPT        1042
-IA                  1230
-INVALCH             1393
-LETTER              108E
+ENDING              178A
+ENDINGPROMPT        1044
+GETBITS             119E
+IA                  14FC
+INVALCH             169C
+ISOLATEADDRESSBIT0TO5  13B4
+ISOLATEREGISTERBIT9TO11  13DA
+LETTER              1090
 LF                  A
-LOOP                111E
-M00                 118E
-M0100               11A0
-M0110               11A0
-M1000               11A0
-M1001               11A0
-M1100               11D0
-M1101               11D0
+LOOP                1120
+M00                 11B4
+M0100               11C6
+M0110               1250
+M1000               1250
+M1001               127C
+M1100               12BA
+M1101               132E
+M1110               132E
 MAIN                1000
-MAND                11D0
-MANYCHAR            13E1
-MANYCHARERROR       1270
-MASL                11D0
-MASR                11D0
-MBEQ                11A0
-MBGE                11A0
-MBLT                11A0
-MBRA                11A0
-MJSR                11A0
-MLEA                11A0
-MLSL                11D0
-MLSR                11D0
-MMULS               11D0
-MNOT                11A0
-MORECHECKS          10BE
-MORECHECKS1         10CA
-MORECHECKS2         10EC
-MOVEM               11A0
-NUMBER              10A2
-ODD                 13B4
-ODDERROR            1260
-PBYTE               1206
-PD                  1230
-PI                  1230
-PLONG               1222
-PRINTADD            1347
-PRINTARD            1364
-PRINTARI            1366
-PRINTDRD            1362
-PRINTIA             1369
-PRINTMOVE           1342
-PRINTN              1230
-PRINTNOP            1336
-PRINTPD             136E
-PRINTPI             136B
-PRINTR              1240
-PRINTRTS            133C
-PRINTSIZEB          134F
-PRINTSIZEL          135A
-PRINTSIZEW          1354
-PRINTSUB            134B
-PWORD               1214
+MAND                12FE
+MANYCHAR            16EA
+MANYCHARERROR       1542
+MASL                132E
+MASR                132E
+MBEQ                1250
+MBGE                1250
+MBLT                1250
+MBRA                1250
+MJSR                1250
+MLEA                11F4
+MLSL                132E
+MLSR                132E
+MMULS               12EE
+MNOT                1224
+MORECHECKS          10C0
+MORECHECKS1         10CC
+MORECHECKS2         10EE
+MOVEM               11F4
+MULSCHECK           12D8
+NUMBER              10A4
+ODD                 16BD
+ODDERROR            1532
+PBYTE               1412
+PD                  14DC
+PI                  14BC
+PLONG               142E
+PRINTADD            161B
+PRINTAND            1627
+PRINTARD            1662
+PRINTARI            1664
+PRINTARI2           1667
+PRINTCOMMA          1677
+PRINTDIVU           1637
+PRINTDRD            1660
+PRINTIA             1669
+PRINTLEA            1641
+PRINTMOVE           1614
+PRINTMULS           162D
+PRINTN              1502
+PRINTNOP            1608
+PRINTNOT            1648
+PRINTPD             1671
+PRINTPD2            1675
+PRINTPI             166B
+PRINTPI2            166E
+PRINTR              1512
+PRINTRTS            160E
+PRINTSIZEB          164E
+PRINTSIZEL          1658
+PRINTSIZESUBROUTINE  13F2
+PRINTSIZEW          1652
+PRINTSPACE          1679
+PRINTSUB            1621
+PWORD               1420
+SERROR              143C
+SIZEERROR           176A
 STAHEX              1000
-STARTINGPROMPT      1014
-THEEND              1372
-UPDATE              1182
-USEREA              12F6
-USERSA              12B4
-WELCOME             1290
+STARTINGPROMPT      1018
+THEEND              167B
+UPDATE              1192
+USEREA              15C8
+USERSA              1586
+WELCOME             1562
