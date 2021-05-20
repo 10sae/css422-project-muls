@@ -30,6 +30,10 @@ endHex:     DC.L        $0
             ;===TESTING===
             LEA (A3),A4
             NOT.B    D0
+            ASL.L      D2, D1  
+            LSR.W      D1, D0
+            ASR        (A1)
+            LSL.B      #8, D2
             
 startingPrompt:
             ;Ask the user for the starting hex3
@@ -244,7 +248,7 @@ LOOP:
             
             ;Check and see if the instruction is RTS
             CMP.W       (A2),D2
-            BEQ         printR
+            BEQ         printMRTS
             
             ;Clear the contents for reusing
             CLR.L       D2
@@ -731,12 +735,266 @@ MAND:
 *-----------------------------------------------------------
 * LSL,LSR,ASL,ASR INSTRUCTIONS
 *-----------------------------------------------------------  
-M1110:
+M1110: 
+            CLR.L       D2
+            CLR.L       D3
+            
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bits 6-7
+            MOVE.B      #6,D3             ;Start bit index = 6
+            MOVE.B      #2,D4             ;Number of bits needed = 2
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
+            
+            ;Check if Memory Shift
+            CMP.B       #%11,D2
+            BEQ         MemShift
+            
+            ;If not Memory Shift, is a Register Shift
+            
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bit 3
+            MOVE.B      #3,D3             ;Start bit index = 3
+            MOVE.B      #1,D4             ;Number of bits needed = 1
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
+            
+            ;Checks if ASd
+            CMP.B       #%0,D2
+            BEQ         RegAS
+            
+            ;Checks if LSd
+            CMP.B       #%1,D2
+            BEQ         RegLS
+RegShift      
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bits 6-7
+            MOVE.B      #6,D3             ;Start bit index = 6
+            MOVE.B      #2,D4             ;Number of bits needed = 2
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
+            
+            ;Print Size
+            BSR         printSizeSubroutine
+            
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bit 5
+            MOVE.B      #5,D3             ;Start bit index = 5
+            MOVE.B      #1,D4             ;Number of bits needed = 1
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
+            
+            ;Checks if shift count is immediate
+            CMP.B       #%0,D2
+            BEQ         ImmediateCount
+            
+            ;Jumps to helper subroutine to isolates and return the register stored in bits 9 - 11
+            ;D7 will contain the register after this instruction
+            BSR         isolateRegisterBit9to11
+            
+            ;Save #%000 into D6 to specify data register mode
+            MOVE.B      #0,D6
+            
+            ;*Print Shift Count address*
+            BSR         addressModeSR
 
-MLSL:
-MLSR:
-MASL:
-MASR:
+            BSR         RegShift2
+
+RegShift2   ;Print comma after shift count
+            LEA         printComma,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;*Data Register to be Shifted*
+            CLR.L       D2
+            
+            ;Copy the address values into a register
+            MOVE.W      (A2),D2
+            
+            ;Passing in parameters for isolating bits 0-2
+            MOVE.B      #0,D3             ;Start bit index = 0
+            MOVE.B      #3,D4             ;Number of bits needed = 3
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+            
+            ;Save Xn register bit into ***D7*** for later use in addressModeSR
+            MOVE.B      D2,D7
+            
+            ;Save #%000 into D6 to specify data register mode
+            MOVE.B      #0,D6
+            
+            ;*Prints data register to be shifted*
+            BSR         addressModeSR
+
+            BRA         update
+            
+ImmediateCount
+            ;Print #$
+            LEA        printIA,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bits 9-11
+            MOVE.B      #9,D3             ;Start bit index = 9
+            MOVE.B      #3,D4             ;Number of bits needed = 3
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
+            
+            ;Check if shift count is 8
+            CMP.B       #%000,D2
+            BEQ         ShiftEight
+            
+            MOVE.B      D2, D1
+            BSR         ImmediateCount2
+           
+ImmediateCount2
+            ;Print shift count
+            MOVE.B      #3,D0
+            TRAP        #15
+            BSR         RegShift2
+ 
+ShiftEight  ;Move 8 into D1    
+            MOVE.B      #8, D1
+            BSR         ImmediateCount2
+                                   
+MemShift
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bit 9
+            MOVE.B      #9,D3             ;Start bit index = 9
+            MOVE.B      #1,D4             ;Number of bits needed = 1
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
+            
+            ;Checks if ASd
+            CMP.B       #%0,D2
+            BEQ         MemAS
+            
+            ;Checks if LSd
+            CMP.B       #%1,D2
+            BEQ         MemLS
+
+MemShift2   
+            ;Print Space
+            LEA        printSpace,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            ;*Memory Address*
+            ;Jumps to helper subroutine to isolates and return the address mode & register stored in bits 0 - 5
+            ;D6 will contain mode & D7 will contain the register after this instruction
+            BSR         isolateAddressBit0to5
+            
+            ;*Print source address*
+            BSR         addressModeSR
+            
+            BRA         update
+            
+MemAS       ;Print AS
+            BSR         MAS      
+            BSR         MemDirectionSubroutine                
+
+            
+MemLS       ;Print LS
+            BSR         MLS      
+            BSR         MemDirectionSubroutine
+            
+RegAS       ;Print AS
+            BSR         MAS      
+            BSR         RegDirectionSubroutine                
+
+            
+RegLS       ;Print LS
+            BSR         MLS      
+            BSR         RegDirectionSubroutine
+
+MLS:
+            LEA        printMLS,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            RTS
+MAS:
+            LEA        printMAS,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            RTS
+
+MemDirectionSubroutine
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bit 8
+            MOVE.B      #8,D3             ;Start bit index = 8
+            MOVE.B      #1,D4             ;Number of bits needed = 1
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
+            
+            ;Checks if Right
+            CMP.B       #%0,D2
+            BEQ         MR
+            
+            ;Checks if Left
+            CMP.B       #%1,D2
+            BEQ         ML
+                        
+MR          LEA        printR,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            BSR        MemShift2
+
+ML          LEA        printL,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            BSR        MemShift2
+            
+RegDirectionSubroutine
+            ;Copy the address values into a register
+            MOVE.W     (A2),D2
+            
+            ;Passing in parameters for isolating bit 8
+            MOVE.B      #8,D3             ;Start bit index = 8
+            MOVE.B      #1,D4             ;Number of bits needed = 1
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits  
+            
+            ;Checks if Right
+            CMP.B       #%0,D2
+            BEQ         RR
+            
+            ;Checks if Left
+            CMP.B       #%1,D2
+            BEQ         RL
+                        
+RR          LEA        printR,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            BSR        RegShift
+
+RL          LEA        printL,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            BSR        RegShift
 *-----------------------------------------------------------------------
 *-----------------------------------------------------------------------
 *-----------------------------------------------------------------------
@@ -936,10 +1194,6 @@ printSizeSubroutine:
             CMP.B      #%10,D2
             BEQ        PLong
             
-            CMP.B      #%11,D2
-            BEQ        sError
-         
-           
 PByte:
             LEA        printSIZEB,A1
             MOVE.B     #14,D0
@@ -957,14 +1211,9 @@ PLong:
             MOVE.B     #14,D0
             TRAP       #15
             
+            ;NOTE: no error message for #%11 so ASd/LSd can use this subroutine
             RTS
             
-sError:            
-            LEA        sizeError,A1
-            MOVE.B     #14,D0
-            TRAP       #15
-            
-            BRA        update
             
 *-----------------------------------------------------------
 * Addressing Mode Implementation
@@ -1090,7 +1339,7 @@ printN:
             
             BRA        update
 
-printR:
+printMRTS:
             LEA        printRTS,A1
             MOVE.B     #14,D0
             TRAP       #15
@@ -1158,6 +1407,11 @@ printBEQ    DC.B        CR,LF,'BEQ',0
 printJSR    DC.B        CR,LF,'JSR',0
 printRTS    DC.B        CR,LF,'RTS',0
 printBRA    DC.B        CR,LF,'BRA',0
+printMAS    DC.B        CR,LF,'AS',0
+printMLS    DC.B        CR,LF,'LS',0
+printL      DC.B        'L',0
+printR      DC.B        'R',0
+
 
 ;-----------------------------------------------------------
 ;Size Messages
@@ -1216,6 +1470,10 @@ ending:
 
 
 
+*~Font name~Courier New~
+*~Font size~10~
+*~Tab type~1~
+*~Tab size~4~
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
