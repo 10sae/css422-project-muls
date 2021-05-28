@@ -28,12 +28,19 @@ endHex:     DC.L        $0
             TRAP        #15
                    
             ;===TESTING===
-            LEA (A3),A4
-            NOT.B    D0
-            ASL.L      D2, D1  
-            LSR.W      D1, D0
-            ASR        (A1)
-            LSL.B      #8, D2
+            JSR      testing
+            
+;===TESTING================            
+testing:
+
+;Fix the ADDI and SUBI Issue!
+;See what you can do with MOVEM
+;Implement the rest of the opcodes when the other members have them
+            ADD.B       #12,D2
+            ADD.W       #1234,D4
+            ADD.L       #12345678,D5
+            
+;==========================            
             
 startingPrompt:
             ;Ask the user for the starting hex3
@@ -241,7 +248,7 @@ LOOP:
             
             ;Check and see i the instruction is NOP
             CMP.W       (A2),D2
-            BEQ         printN
+            BEQ         printMNOP
             
             ;Move the RTS binary value for comparing
             MOVE.L      #%0100111001110101,D2
@@ -324,10 +331,10 @@ LOOP:
 update:
             ;Check and see if we are at the ending hex
             CMP.L      endHex,A2
-            BEQ        ending
+            BGT        ending
 
             ;Update address in A2
-            ADD.L      #2,A2
+            ADDA.W      #2,A2
             
             
             BRA        LOOP
@@ -359,7 +366,13 @@ getBits:
             RTS
 
 *-----------------------------------------------------------
+* 
+*
+*
 * OpCode Implementation
+*
+*
+*
 *-----------------------------------------------------------
 
 
@@ -379,33 +392,97 @@ M00:
             MOVE.W     (A2),D2
             
             ;Passing in parameters for isolating size bits 12,13
-            MOVE.B      #13,D3             
+            MOVE.B      #12,D3             
             MOVE.B      #2,D4             
             
             ;Jumps to getBits and returns with isolated bits in D2
             BSR         getBits  
             
+            ;Indicate to our print function we are doing this for the MOVE opcode
+            MOVE.B      #1,D3
+            
             ;Jumps to printSizeSubroutine and returns after size has been printed
             BSR         printSizeSubroutine
+            
+            ;Let's store the size indicator since it will help us determine how many times
+            ;we have to iterate through addresses to print out the whole instruction
+            ;We will use A4 as the register to temporary store the size
+            MOVE.W      D2,A4
             
             ;Clear the register so we can reuse it
             CLR.L       D2
             
             MOVE.B      (A2),D2
+            
+            ;Just before manipulating A2's value, lets store a copy of it so we can use the unmanipulated address
+            ;This is meant so we can use the copy to figure out the destination addressing mode
+            MOVE.L      A2,A3
 
+            BSR         mSourceDest
             
-            ;Get bits 11-6 for the source
-            ;First we must figure out the register that is being used
-            ;Then find the addressing mode
+            CLR.L       D3
             
-            ;Get bits 0-15 for the destination
-            ;This uses the same procedure from previous opcodes
-            ;First find the addressing mode
-            ;Then find the register that is being used
-            
-            BRA        update
+            BRA         update
           
+;======Helper function to find the destination for MOVE======
+mSourceDest:
+            ;SOURCE
+            ;Jump to a helper subroutine which will help isolate bits for the address mode and register
+            BSR        isolateAddressBit0to5
+            
+            ;Print source address
+            BSR        addressModeSR
+            
+            ;Print the comma after the source address
+            LEA        printComma,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            ;DESTINATION
+            ;Jump to a helper subroutine which will help isolate bits for the address mode and register
+            BSR        isolateAddressBit6to11
+            
+            ;Print destination address
+            BSR        addressModeSR
+            
+            RTS
 
+isolateAddressBit6to11:
+            ;===Isolate the Destination Mode (M)Bits===
+            CLR.L      D2
+            
+            ;Copy the address value into a register
+            MOVE.W     (A3),D2
+            
+            ;Passing in parameters for isolating Mode bits
+            MOVE.B     #6,D3
+            MOVE.B     #3,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            JSR        getBits
+            
+            ;Save M bit into ***D6*** for later use in addressModeSubroutine
+            MOVE.B     D2,D6
+            
+            ;===Isolate the Destination Address Register (Xn)Bits===
+            CLR.L      D2
+            
+            ;Copy the address values into a register
+            MOVE.W     (A3),D2
+            
+            ;Passing in parameters for isolating Xn bits
+            MOVE.B     #9,D3
+            MOVE.B     #3,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            JSR        getBits
+            
+            ;Save Xn register bit into ***D7*** for later use in addressModeSR
+            MOVE.B      D2,D7
+
+            RTS
+            
+            
 *-----------------------------------------------------------
 * MOVEM,LEA,NOT,JSR INSTRUCTIONS
 *-----------------------------------------------------------
@@ -482,6 +559,13 @@ M0100:
             
        
 MOVEM:
+            *******************
+            *Must finish!!!!!!
+            *******************
+            LEA         printMOVEM,A1
+            MOVE.B      $14,D0
+            TRAP        #15
+
 
 MLEA:
             LEA         printLEA,A1
@@ -629,6 +713,10 @@ M1001:
             ;Jumps to printSizeSubroutine and returns after size has been printed
             BSR         printSizeSubroutine
             
+            ;Let's store the size indicator since it will help us determine how many times
+            ;we have to iterate through addresses to print out the whole instruction
+            ;We will use A4 as the register to temporary store the size
+            MOVE.W      D2,A4
        
             ;======Isolate direction (D) Bit=======
             ; 0 = data register is destination | 1 = Dn is source
@@ -735,7 +823,7 @@ MAND:
 *-----------------------------------------------------------
 * LSL,LSR,ASL,ASR INSTRUCTIONS
 *-----------------------------------------------------------  
-M1110: 
+M1110:
             CLR.L       D2
             CLR.L       D3
             
@@ -995,6 +1083,8 @@ RL          LEA        printL,A1
             MOVE.B     #14,D0
             TRAP       #15
             BSR        RegShift
+
+
 *-----------------------------------------------------------------------
 *-----------------------------------------------------------------------
 *-----------------------------------------------------------------------
@@ -1024,6 +1114,11 @@ M1101:
             
             ;Jumps to printSizeSubroutine and returns after size has been printed
             BSR         printSizeSubroutine
+       
+            ;Let's store the size indicator since it will help us determine how many times
+            ;we have to iterate through addresses to print out the whole instruction
+            ;We will use A4 as the register to temporary store the size
+            MOVE.W      D2,A4
        
             ;======Isolate direction (D) Bit=======
             ; 0 = data register is destination | 1 = Dn is source
@@ -1184,6 +1279,10 @@ printSizeSubroutine:
             ;PARAMETER:
             ;D2 = the size bits
             
+            ;Since MOVE uses different bits for size, we must check and see if the opcode is MOVE
+            CMP.B      #1,D3
+            BEQ        printMOVESize
+            
             ;Compare to which size is being moved for the opcode
             CMP.B      #%00,D2
             BEQ        PByte
@@ -1193,7 +1292,19 @@ printSizeSubroutine:
             
             CMP.B      #%10,D2
             BEQ        PLong
-            
+         
+printMOVESize:
+            ;Now that we know we have a MOVE opcode
+            ;Compare to which size is being moved for the opcode
+            CMP.B      #%01,D2
+            BEQ        PByte
+
+            CMP.B      #%11,D2
+            BEQ        PWord            
+  
+            CMP.B      #%10,D2
+            BEQ        PLong
+
 PByte:
             LEA        printSIZEB,A1
             MOVE.B     #14,D0
@@ -1211,9 +1322,7 @@ PLong:
             MOVE.B     #14,D0
             TRAP       #15
             
-            ;NOTE: no error message for #%11 so ASd/LSd can use this subroutine
             RTS
-            
             
 *-----------------------------------------------------------
 * Addressing Mode Implementation
@@ -1243,6 +1352,10 @@ addressModeSR:
             ;Pre Decrement
             CMP.B       #%100,D6
             BEQ         PD
+            
+            ;Immediate/Absolute Addressing
+            CMP.B       #%111,D6
+            BEQ         Address
 DRD:
             ;Print D __
             LEA         printDRD,A1
@@ -1318,21 +1431,85 @@ PD:
             TRAP        #15
             
             RTS
-IA:
-            ;Print #$ ______
-            RTS
-ALA:
-            ;Print $-------- (8 digits)
-            RTS
-AWA:
-            ;Print $---- (4 digits)
+            
+Address:
+            ;Print #--------          
+            CMP.B       #%100,D7
+            BEQ         printImmediate
+            
+            ;Print $--------
+            CMP.B       #%000,D7
+            BEQ         printAbsolute
+            
+            ;Print $----
+            CMP.B       #%001,D7
+            BEQ         printAbsolute
+            
+            ;Since we are dealing with addresses, we update our address to account for the actual address value
+            ;We will be able to access the contents of either size B or W
+            ADDA.W      #2,A2         
+
+            ;See if we have to print out a long 
+            CMP.B       #%10,(A4)
+            BEQ         updateLong
+            
+            ;If we don't branch, then we assume we're printing out a byte or word      
+            MOVE.L      #3,D0
+            MOVE.W      (A2),D1
+            TRAP        #15
+            
             RTS
 
+
+updateLong:
+            ;Place the current value into a temp register
+            MOVE.W      (A2),D4
+            
+            ;Shift the bits so we can enter the rest of the values
+            MOVE.B      #16,D7
+            LSL.L       D7,D4
+            
+            ;Increment A2 to account for the next values in the machine code
+            ADDA.W      #2,A2
+            
+            ;Move the rest of the machine code into our register
+            ;This register should have the whole long values
+            MOVE.W      (A2),D4
+            
+            ;Print out the value in the address
+            MOVE.L      #3,D0
+            MOVE.L      D4,D1
+            TRAP        #15
+            
+            RTS
+
+*-----------------------------------------------------------
+* Print Immediate, or Absolute Addressing symbol
+*-----------------------------------------------------------
+printImmediate:
+            LEA         printIA,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Clear D7 so we can branch back and not repeat the process in Address
+            MOVE.B      #7,D7
+            
+            BRA         Address
+ 
+printAbsolute:
+            LEA         printA,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Clear D7 so we can branch back and not repeat the process in Address
+            MOVE.B      #7,D7
+            
+            BRA         Address
 
 *-----------------------------------------------------------
 * Print Instructions for NOP and RTS
 *-----------------------------------------------------------
-printN:
+printMNOP:
             LEA        printNOP,A1
             MOVE.B     #14,D0
             TRAP       #15
@@ -1404,21 +1581,19 @@ printASR    DC.B        CR,LF,'ASR',0
 printBLT    DC.B        CR,LF,'BLT',0
 printBGE    DC.B        CR,LF,'BGE',0
 printBEQ    DC.B        CR,LF,'BEQ',0
-printJSR    DC.B        CR,LF,'JSR',0
+printJSR    DC.B        CR,LF,'JSR ',0
 printRTS    DC.B        CR,LF,'RTS',0
 printBRA    DC.B        CR,LF,'BRA',0
 printMAS    DC.B        CR,LF,'AS',0
 printMLS    DC.B        CR,LF,'LS',0
-printL      DC.B        'L',0
+printL      DC.B        'L',0    
 printR      DC.B        'R',0
-
-
 ;-----------------------------------------------------------
 ;Size Messages
 ;-----------------------------------------------------------
-printSIZEB   DC.B        '.B ',0
-printSIZEW   DC.W        '.W ',0
-printSIZEL   DC.L        '.L ',0
+printSIZEB  DC.B        '.B ',0
+printSIZEW  DC.W        '.W ',0
+printSIZEL  DC.L        '.L ',0
 
 ;-----------------------------------------------------------
 ;Addressing Mode Messages
@@ -1428,16 +1603,16 @@ printARD      DC.B        'A',0
 printARI      DC.B        '(A',0
 printARI2     DC.B        ')',0
 printIA       DC.B        '#',0
+printA        DC.B        '$',0
 printPI       DC.B        '(A',0
 printPI2      DC.B        ')+',0
 printPD       DC.B        '-(A',0
 printPD2      DC.B        ')',0
-;printAA       DC.B        ''   /TBD
 
 printComma    DC.B        ',',0
 printSpace    DC.B        ' ',0
 
-theEnd      DC.B        CR,LF,'You are now ending the program',0
+theEnd        DC.B        CR,LF,'You are now ending the program',0
 
 ;-----------------------------------------------------------
 ;ERRORS
@@ -1469,11 +1644,6 @@ ending:
 
 
 
-
-*~Font name~Courier New~
-*~Font size~10~
-*~Tab type~1~
-*~Tab size~4~
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
