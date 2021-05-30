@@ -33,12 +33,22 @@ endHex:     DC.L        $0
 ;===TESTING================            
 testing:
 
-;Fix the ADDI and SUBI Issue!
 ;See what you can do with MOVEM
 ;Implement the rest of the opcodes when the other members have them
-            ADD.B       #12,D2
-            ADD.W       #1234,D4
-            ADD.L       #12345678,D5
+            ADD.B       #12,D3
+            ADD.W       #1234,D7
+            ADD.L       #12345678,D4
+            SUB.B       #12,D3
+            SUB.W       #1234,D5
+            SUB.L       #12345678,D6
+            
+            ADD.B       #12,D3
+            ADD.L       $12345678,D7
+            ADD.W       #1234,D7
+            ADD.L       #12345678,D4
+            SUB.B       #12,D3
+            SUB.W       #1234,D5
+            SUB.L       #12345678,D6
             
 ;==========================            
             
@@ -260,6 +270,22 @@ LOOP:
             ;Clear the contents for reusing
             CLR.L       D2
             
+            ;--------------------------------------------------------
+            ;Check for ADDI or SUBI, check for four 0's since it's the only
+            ;opcode with this pattern
+            ;--------------------------------------------------------  
+            ;Move the value in A2 to a temp register
+            MOVE.W      (A2),D2
+            
+            ;Passing in parameters for isolating the left most hand 4 bits of D2 using getBits
+            MOVE.B      #12,D3
+            MOVE.B      #4,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+            
+            CMP.B       #%0000,D2
+            BEQ         M0000
             
             ;--------------------------------------------------------
             ;Check for MOVE, since it's the only word starting with 00
@@ -329,6 +355,16 @@ LOOP:
 
            
 update:
+            *=====Important if we've done any Immediate or Absolute addressing=====*
+            ;If we've done any Immediate or Absolute addressing, then we would have made use of A6. 
+            ;A6 would point to the last word in instruction and thus pointing to a larger address value than A2, 
+            ;because A2 always points at the the first word in an instruction (opcode).
+            CMP.L       A6,A2
+            BGE         skipA6
+            
+            ;If A6 points to an address larger than the one A2 points to then we update A2 to point to where A6 points
+            MOVEA.L     A6,A2
+skipA6:
             ;Check and see if we are at the ending hex
             CMP.L      endHex,A2
             BGT        ending
@@ -377,6 +413,181 @@ getBits:
 
 
 *-----------------------------------------------------------
+* ADDI/SUBI INSTRUCTION
+*-----------------------------------------------------------
+M0000:
+            CLR.L       D2
+            CLR.L       D3
+            
+            ;Copy the address values into a register to check for ADDI or SUBI
+            MOVE.W      (A2),D2
+            
+            ;Passing in paramters for isolating bits
+            MOVE.B      #8,D3
+            MOVE.B      #4,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+            
+            ;--------------------------------------------------------
+            ;Check for ADDI
+            ;--------------------------------------------------------
+            CMP.B       #%0110,D2
+            BEQ         MADDI
+           
+            ;--------------------------------------------------------
+            ;Check for SUBI
+            ;--------------------------------------------------------
+            CMP.B       #%0100,D2
+            BEQ         MSUBI
+
+MADDI:
+            LEA         printADDI,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            CLR.L       D2
+            CLR.L       D3
+            
+            ;======Isolate Size (S) Bits======
+            ;Copy the address values into a register
+            MOVE.W      (A2),D2
+            
+            ;Passing in parameters for isolating size bits
+            MOVE.B      #6,D3
+            MOVE.B      #2,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+            
+            ;Jumps to printSizeSubroutine and returns after size has been printed
+            BSR         printSizeSubroutine
+            
+            ;Let's store the size indicator since it will help us determine how many times
+            ;we have to iterate through addresses to print out the whole instruction
+            ;We will use A4 as the register to temporary store the size
+            MOVE.W      D2,A4
+            MOVE.B      D2,$2000
+            
+            ;Clear the register so we can reuse it
+            CLR.L       D2
+            
+            MOVE.B      (A2),D2
+            
+            ;Just before manipulating A2's value, let's store a copy of it so we can use the unmanipulated address
+            ;This is meant so we can use the copy to figure out the destination addrresing mode
+            MOVE.L      A2,A3
+            
+            BSR         mEffect
+            
+            CLR.L       D3
+            
+            BRA         update
+            
+            
+MSUBI:
+            LEA         printSUBI,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            CLR.L       D2
+            CLR.L       D3
+            
+            ;======Isolate Size (S) Bits======
+            ;Copy the address values into a register
+            MOVE.W      (A2),D2
+            
+            ;Passing in parameters for isolating size bits
+            MOVE.B      #6,D3
+            MOVE.B      #2,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            BSR         getBits
+            
+            ;Jumps to printSizeSubroutine and returns after size has been printed
+            BSR         printSizeSubroutine
+            
+            ;Let's store the size indicator since it will help us determine how many times
+            ;we have to iterate through addresses to print out the whole instruction
+            ;We will use A4 as the register to temporary store the size
+            MOVE.W      D2,A4
+            MOVE.B      D2,$2000
+            
+            ;Clear the register so we can reuse it
+            CLR.L       D2
+            
+            MOVE.B      (A2),D2
+            
+            ;Just before manipulating A2's value, let's store a copy of it so we can use the unmanipulated address
+            ;This is meant so we can use the copy to figure out the destination addrresing mode
+            MOVE.L      A2,A3
+            
+            BSR         mEffect
+            
+            CLR.L       D3
+            
+            BRA         update
+
+            
+mEffect:
+            ;Male D6 #%111 since the source will always be an immediate value 
+            MOVE.B      #7,D6
+            ;Make D7 #%100 since the source will always be an immediate value
+            MOVE.B      #4,D7     
+
+            ;Print source address
+            BSR         addressModeSR
+            
+            ;Print the comma after the source address
+            LEA        printComma,A1
+            MOVE.B     #14,D0
+            TRAP       #15
+            
+            ;Jump to a helper subroutine which will help isolate bits for the address mode and register
+            BSR        isoAddBit0to5
+            
+            ;Print source address
+            BSR        addressModeSR
+            
+            RTS            
+            
+            
+isoAddBit0to5:
+            ;===Isolate the Destination Mode (M)Bits===
+            CLR.L      D2
+            
+            ;Copy the address value into a register
+            MOVE.W     (A3),D2
+            
+            ;Passing in parameters for isolating Mode bits
+            MOVE.B     #3,D3
+            MOVE.B     #3,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            JSR        getBits
+            
+            ;Save M bit into ***D6*** for later use in addressModeSubroutine
+            MOVE.B     D2,D6
+            
+            ;===Isolate the Destination Address Register (Xn)Bits===
+            CLR.L      D2
+            
+            ;Copy the address values into a register
+            MOVE.W     (A3),D2
+            
+            ;Passing in parameters for isolating Xn bits
+            MOVE.B     #0,D3
+            MOVE.B     #3,D4
+            
+            ;Jumps to getBits and returns with isolated bits in D2
+            JSR        getBits
+            
+            ;Save Xn register bit into ***D7*** for later use in addressModeSR
+            MOVE.B      D2,D7
+
+            RTS
+            
+*-----------------------------------------------------------
 * MOVE INSTRUCTION
 *-----------------------------------------------------------
 M00:
@@ -408,7 +619,8 @@ M00:
             ;we have to iterate through addresses to print out the whole instruction
             ;We will use A4 as the register to temporary store the size
             MOVE.W      D2,A4
-            
+            MOVE.B      D2,$2000
+
             ;Clear the register so we can reuse it
             CLR.L       D2
             
@@ -717,7 +929,8 @@ M1001:
             ;we have to iterate through addresses to print out the whole instruction
             ;We will use A4 as the register to temporary store the size
             MOVE.W      D2,A4
-       
+            MOVE.B      D2,$2000
+            
             ;======Isolate direction (D) Bit=======
             ; 0 = data register is destination | 1 = Dn is source
             CLR.L       D2
@@ -1119,7 +1332,8 @@ M1101:
             ;we have to iterate through addresses to print out the whole instruction
             ;We will use A4 as the register to temporary store the size
             MOVE.W      D2,A4
-       
+            MOVE.B      D2,$2000
+            
             ;======Isolate direction (D) Bit=======
             ; 0 = data register is destination | 1 = Dn is source
             CLR.L       D2
@@ -1354,8 +1568,12 @@ addressModeSR:
             BEQ         PD
             
             ;Immediate/Absolute Addressing
+            ;CMP.B       #%111,D6
+            ;BEQ         Address
+            
+            ;Immediate/Absolute Addressing
             CMP.B       #%111,D6
-            BEQ         Address
+            BEQ         otherModes
 DRD:
             ;Print D __
             LEA         printDRD,A1
@@ -1431,7 +1649,85 @@ PD:
             TRAP        #15
             
             RTS
+
+otherModes:
+            *=====Important step for making sure we have access to where A2 orignally points=====*
+            MOVEA.L         A2,A6
+            *=====
+            ;Branch to Immediate if register bits are %100       
+            CMP.B       #%100,D7
+            BEQ         Immediate
             
+            ;Otherwise, branch to Absolute
+            BRA         Absolute
+            
+                   
+Immediate:
+            ;Print #
+            LEA         printIA,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Since we are dealing with addresses, we update our address to account for the actual address value
+            ;We will be able to access the contents of either size B or W
+            ADDA.W      #2,A2         
+
+            ;If the value is a Long then branch to ImmLong to get the remaining bits of the value
+            CMP.B       #%10,$2000
+            BEQ         updateLong
+            
+            ;If we don't branch, then we assume we're printing out a byte or word      
+            MOVE.L      #3,D0
+            MOVE.W      (A2),D1
+            TRAP        #15
+            
+            RTS
+            
+            
+            
+Absolute:
+            ;Print $
+            LEA         printA,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Point to the next word (contains memory address)
+            ADDA.W      #2,A6
+            
+            ;If the value is a Long then branch to AbsLong to get the remaining bits of the value
+            CMP.B       #%001,D7
+            BEQ         AbsLong
+            
+            ;Print out the value in the address if it's a word
+            MOVE.L      #3,D0
+            MOVE.W      (A6),D1
+            TRAP        #15
+            
+            RTS
+            
+AbsLong:            
+            ;Place the current value into a temp register
+            MOVE.W      (A6),D4
+            
+            ;Shift the bits so we can enter the rest of the values
+            MOVE.B      #16,D7
+            LSL.L       D7,D4
+            
+            ;Increment A6 to account for the next values in the instruction
+            ADDA.W      #2,A6
+            
+            ;Move the rest of the machine code into our register
+            ;This register should have the whole long values
+            MOVE.W      (A6),D4
+            
+            ;Print the Long address
+            MOVE.L      #3,D0
+            MOVE.L      D4,D1
+            TRAP        #15
+            
+            RTS    
+        
+*===========================OLD VERSION========================================================          
 Address:
             ;Print #--------          
             CMP.B       #%100,D7
@@ -1459,9 +1755,11 @@ Address:
             TRAP        #15
             
             RTS
-
+*==========================END OLD VERSION============================================================
 
 updateLong:
+            *********USED FOR IMMEDIATE LONGS ONLY***************
+            
             ;Place the current value into a temp register
             MOVE.W      (A2),D4
             
@@ -1483,8 +1781,12 @@ updateLong:
             
             RTS
 
+
+
+
+
 *-----------------------------------------------------------
-* Print Immediate, or Absolute Addressing symbol
+* Print Immediate, or Absolute Addressing symbol    ********************OLD VERSION*******************
 *-----------------------------------------------------------
 printImmediate:
             LEA         printIA,A1
@@ -1504,7 +1806,8 @@ printAbsolute:
             ;Clear D7 so we can branch back and not repeat the process in Address
             MOVE.B      #7,D7
             
-            BRA         Address
+            ;BRA         Address
+                                            **********************************************************888
 
 *-----------------------------------------------------------
 * Print Instructions for NOP and RTS
@@ -1568,7 +1871,9 @@ printNOP    DC.B        CR,LF,'NOP',0
 printMOVE   DC.B        CR,LF,'MOVE',0
 printMOVEM  DC.B        CR,LF,'MOVEM',0
 printADD    DC.B        CR,LF,'ADD',0
+printADDI   DC.B        CR,LF,'ADDI',0
 printSUB    DC.B        CR,LF,'SUB',0
+printSUBI   DC.B        CR,LF,'SUBI',0
 printMULS   DC.B        CR,LF,'MULS.W ',0
 printDIVU   DC.B        CR,LF,'DIVU.W ',0
 printLEA    DC.B        CR,LF,'LEA ',0
@@ -1632,6 +1937,9 @@ ending:
             TRAP        #15
             
             END         MAIN 
+
+
+
 
 
 
