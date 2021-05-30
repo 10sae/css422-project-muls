@@ -50,6 +50,14 @@ testing:
             SUB.W       #1234,D5
             SUB.L       #12345678,D6
             
+            MOVE.B      #12,$1238
+            MOVE.W      #9812,$1238
+            MOVE.L      #12425567,$1234
+            
+
+            
+           
+            
 ;==========================            
             
 startingPrompt:
@@ -364,6 +372,7 @@ update:
             
             ;If A6 points to an address larger than the one A2 points to then we update A2 to point to where A6 points
             MOVEA.L     A6,A2
+            
 skipA6:
             ;Check and see if we are at the ending hex
             CMP.L      endHex,A2
@@ -624,17 +633,14 @@ M00:
             ;Clear the register so we can reuse it
             CLR.L       D2
             
-            MOVE.B      (A2),D2
+            MOVE.W      (A2),D2
             
             ;Just before manipulating A2's value, lets store a copy of it so we can use the unmanipulated address
             ;This is meant so we can use the copy to figure out the destination addressing mode
             MOVE.L      A2,A3
 
-            BSR         mSourceDest
+            BRA         mSourceDest
             
-            CLR.L       D3
-            
-            BRA         update
           
 ;======Helper function to find the destination for MOVE======
 mSourceDest:
@@ -657,7 +663,10 @@ mSourceDest:
             ;Print destination address
             BSR        addressModeSR
             
-            RTS
+            CLR.L      D3
+            
+            BRA        update
+            
 
 isolateAddressBit6to11:
             ;===Isolate the Destination Mode (M)Bits===
@@ -1568,10 +1577,6 @@ addressModeSR:
             BEQ         PD
             
             ;Immediate/Absolute Addressing
-            ;CMP.B       #%111,D6
-            ;BEQ         Address
-            
-            ;Immediate/Absolute Addressing
             CMP.B       #%111,D6
             BEQ         otherModes
 DRD:
@@ -1651,9 +1656,16 @@ PD:
             RTS
 
 otherModes:
-            *=====Important step for making sure we have access to where A2 orignally points=====*
-            MOVEA.L         A2,A6
-            *=====
+            CMP.W       A6,A2
+            
+            BLT         SKIPCOPY  
+
+             *=====Important step for making sure we have access to where A2 orignally points=====*
+            MOVEA.L     A2,A6 
+
+
+SKIPCOPY:            
+            
             ;Branch to Immediate if register bits are %100       
             CMP.B       #%100,D7
             BEQ         Immediate
@@ -1661,6 +1673,7 @@ otherModes:
             ;Otherwise, branch to Absolute
             BRA         Absolute
             
+        
                    
 Immediate:
             ;Print #
@@ -1674,7 +1687,7 @@ Immediate:
 
             ;If the value is a Long then branch to ImmLong to get the remaining bits of the value
             CMP.B       #%10,$2000
-            BEQ         updateLong
+            BEQ         IMDLong
             
             ;If we don't branch, then we assume we're printing out a byte or word      
             MOVE.L      #3,D0
@@ -1699,7 +1712,10 @@ Absolute:
             BEQ         AbsLong
             
             ;Print out the value in the address if it's a word
-            MOVE.L      #3,D0
+            CLR.L       D1
+            
+            MOVE.W      #15,D0
+            MOVE.W      #16,D2
             MOVE.W      (A6),D1
             TRAP        #15
             
@@ -1721,43 +1737,16 @@ AbsLong:
             MOVE.W      (A6),D4
             
             ;Print the Long address
-            MOVE.L      #3,D0
+            CLR.L       D1
+            
+            MOVE.L      #15,D0
+            MOVE.L      #16,D2
             MOVE.L      D4,D1
             TRAP        #15
             
             RTS    
         
-*===========================OLD VERSION========================================================          
-Address:
-            ;Print #--------          
-            CMP.B       #%100,D7
-            BEQ         printImmediate
-            
-            ;Print $--------
-            CMP.B       #%000,D7
-            BEQ         printAbsolute
-            
-            ;Print $----
-            CMP.B       #%001,D7
-            BEQ         printAbsolute
-            
-            ;Since we are dealing with addresses, we update our address to account for the actual address value
-            ;We will be able to access the contents of either size B or W
-            ADDA.W      #2,A2         
-
-            ;See if we have to print out a long 
-            CMP.B       #%10,(A4)
-            BEQ         updateLong
-            
-            ;If we don't branch, then we assume we're printing out a byte or word      
-            MOVE.L      #3,D0
-            MOVE.W      (A2),D1
-            TRAP        #15
-            
-            RTS
-*==========================END OLD VERSION============================================================
-
-updateLong:
+IMDLong:
             *********USED FOR IMMEDIATE LONGS ONLY***************
             
             ;Place the current value into a temp register
@@ -1781,33 +1770,6 @@ updateLong:
             
             RTS
 
-
-
-
-
-*-----------------------------------------------------------
-* Print Immediate, or Absolute Addressing symbol    ********************OLD VERSION*******************
-*-----------------------------------------------------------
-printImmediate:
-            LEA         printIA,A1
-            MOVE.B      #14,D0
-            TRAP        #15
-            
-            ;Clear D7 so we can branch back and not repeat the process in Address
-            MOVE.B      #7,D7
-            
-            BRA         Address
- 
-printAbsolute:
-            LEA         printA,A1
-            MOVE.B      #14,D0
-            TRAP        #15
-            
-            ;Clear D7 so we can branch back and not repeat the process in Address
-            MOVE.B      #7,D7
-            
-            ;BRA         Address
-                                            **********************************************************888
 
 *-----------------------------------------------------------
 * Print Instructions for NOP and RTS
@@ -1937,6 +1899,7 @@ ending:
             TRAP        #15
             
             END         MAIN 
+
 
 
 
