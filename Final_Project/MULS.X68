@@ -35,6 +35,7 @@ testing:
 
 ;See what you can do with MOVEM
 ;Implement the rest of the opcodes when the other members have them
+
             ADD.B       #12,D3
             ADD.W       #1234,D7
             ADD.L       #12345678,D4
@@ -50,9 +51,9 @@ testing:
             SUB.W       #1234,D5
             SUB.L       #12345678,D6
             
-            MOVE.B      #12,$1238
-            MOVE.W      #9812,$1238
-            MOVE.L      #12425567,$1234
+            MOVE.B      #12,$6788
+            MOVE.W      #9812,$4568
+            MOVE.L      #12425567,$4674
             
 
             
@@ -257,6 +258,21 @@ moreChecks2:
                         
             
 LOOP:   
+            ;We will be printing out the address, regardless if the opcode is valid or not
+            LEA         AddressNum,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Print out the address
+            MOVE.L      #15,D0
+            MOVE.L      #16,D2
+            MOVE.L      A2,D1
+            TRAP        #15
+            
+            LEA         printSpace,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+
             ;--------------------------------------------------------
             ;Check for NOP or RTS
             ;--------------------------------------------------------
@@ -354,13 +370,27 @@ LOOP:
             CMP.B       #%1101,D2
             BEQ         M1101
             
+            ;BSR         invalOpCode
+            
             BRA         ending
             
             
             
-            ;display INVALID OPCODE, and display the raw hex
-            ;do this later
 
+;If time is allowed, we will get back to this. Otherwise we are 
+;focusing on valid input for testing
+InOpCode:   
+            LEA         invalOpcode,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            MOVE.L      #15,D0
+            MOVE.L      #16,D2
+            MOVE.L      A2,D1
+            TRAP        #15
+            
+            BRA         update
+            
            
 update:
             *=====Important if we've done any Immediate or Absolute addressing=====*
@@ -783,6 +813,17 @@ MOVEM:
             *******************
             *Must finish!!!!!!
             *******************
+            *******************
+
+*******************
+
+*******************
+
+*******************
+
+*******************
+
+
             LEA         printMOVEM,A1
             MOVE.B      $14,D0
             TRAP        #15
@@ -821,9 +862,7 @@ MLEA:
             BRA        update
 
 MNOT:
-            LEA        printNOT,A1
-            MOVE.B     #14,D0
-            TRAP       #15
+            ;Distinguish NOT from "MOVE to SSR"                 
             
             CLR.L      D2
             ;Move the address into the register to check for size
@@ -834,7 +873,15 @@ MNOT:
             MOVE.B     #2,D4
             
             ;Jump to getbits and return with isolated bits
-            BSR        getbits          
+            BSR        getbits
+
+            ;This was meant for invalid opcode testing
+            ;CMP.B      #%11,D2
+            ;BRA        InOpCode     
+
+            LEA        printNOT,A1
+            MOVE.B     #14,D0
+            TRAP       #15    
             
             ;Jumps to printSizeSubroutine and returns after size has been printed
             BSR        printSizeSubroutine
@@ -1825,34 +1872,35 @@ endGreater:
 Welcome     DC.B        'Welcome to the DASM by Group MULS',CR,LF,0
 userSA      DC.B        'Please enter your starting hex address (Only uppercase letters)',CR,LF,0
 userEA      DC.B        'Please enter your ending hex address (Only uppercase letters)',CR,LF,0
+AddressNum  DC.B        CR,LF,'Address: ',0
 
 ;-----------------------------------------------------------
 ;OPCODE Messages
 ;-----------------------------------------------------------
-printNOP    DC.B        CR,LF,'NOP',0
-printMOVE   DC.B        CR,LF,'MOVE',0
-printMOVEM  DC.B        CR,LF,'MOVEM',0
-printADD    DC.B        CR,LF,'ADD',0
-printADDI   DC.B        CR,LF,'ADDI',0
-printSUB    DC.B        CR,LF,'SUB',0
-printSUBI   DC.B        CR,LF,'SUBI',0
-printMULS   DC.B        CR,LF,'MULS.W ',0
-printDIVU   DC.B        CR,LF,'DIVU.W ',0
-printLEA    DC.B        CR,LF,'LEA ',0
-printAND    DC.B        CR,LF,'AND',0
-printNOT    DC.B        CR,LF,'NOT',0
-printLSL    DC.B        CR,LF,'LSL',0
-printLSR    DC.B        CR,LF,'LSR',0
-printASL    DC.B        CR,LF,'ASL',0
-printASR    DC.B        CR,LF,'ASR',0
-printBLT    DC.B        CR,LF,'BLT',0
-printBGE    DC.B        CR,LF,'BGE',0
-printBEQ    DC.B        CR,LF,'BEQ',0
-printJSR    DC.B        CR,LF,'JSR ',0
-printRTS    DC.B        CR,LF,'RTS',0
-printBRA    DC.B        CR,LF,'BRA',0
-printMAS    DC.B        CR,LF,'AS',0
-printMLS    DC.B        CR,LF,'LS',0
+printNOP    DC.B        'NOP',0
+printMOVE   DC.B        'MOVE',0
+printMOVEM  DC.B        'MOVEM',0
+printADD    DC.B        'ADD',0
+printADDI   DC.B        'ADDI',0
+printSUB    DC.B        'SUB',0
+printSUBI   DC.B        'SUBI',0
+printMULS   DC.B        'MULS.W ',0
+printDIVU   DC.B        'DIVU.W ',0
+printLEA    DC.B        'LEA ',0
+printAND    DC.B        'AND',0
+printNOT    DC.B        'NOT',0
+printLSL    DC.B        'LSL',0
+printLSR    DC.B        'LSR',0
+printASL    DC.B        'ASL',0
+printASR    DC.B        'ASR',0
+printBLT    DC.B        'BLT',0
+printBGE    DC.B        'BGE',0
+printBEQ    DC.B        'BEQ',0
+printJSR    DC.B        'JSR ',0
+printRTS    DC.B        'RTS',0
+printBRA    DC.B        'BRA',0
+printMAS    DC.B        'AS',0
+printMLS    DC.B        'LS',0
 printL      DC.B        'L',0    
 printR      DC.B        'R',0
 ;-----------------------------------------------------------
@@ -1889,6 +1937,7 @@ odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
 manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the address',CR,LF,0
 endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
 sizeError   DC.B        'ERROR: Invalid size instruction',0
+invalOpcode DC.B        'ERROR: INVALID OPCODE = ',0
 
 ;-----------------------------------------------------------
 ;Ending function that ends our program 
@@ -1899,6 +1948,7 @@ ending:
             TRAP        #15
             
             END         MAIN 
+
 
 
 
