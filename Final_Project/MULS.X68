@@ -22,6 +22,8 @@ endHex:     DC.L        $0
 ;        Check to see that starting loc, is before ending loc
 ;        Check to see if value starts at odd mem location
 *-----------------------------------------------------------
+realTest:   ;test label for BRA family - nothing to do with our code
+
             ;Show welcome to user
             LEA         Welcome,A1
             MOVE.B      #14,D0
@@ -36,6 +38,21 @@ testing:
 ;See what you can do with MOVEM
 ;Implement the rest of the opcodes when the other members have them
 
+test1:
+            BCC         startingPrompt
+            BRA         test1
+            BRA         test4
+            BRA         00001020
+            BRA         $1020
+            BEQ         realTest
+            BRA         endGreater
+            BLT         test1
+            BGE         continue8Bits
+            BLT         continue16Bits
+            BRA         realTest
+test4:
+            BRA startingPrompt
+            
             ADD.B       #12,D3
             ADD.W       #1234,D7
             ADD.L       #12345678,D4
@@ -916,11 +933,216 @@ MJSR:
 * BRA,BLT,BGE,BEQ INSTRUCTIONS
 *-----------------------------------------------------------       
 M0110:
-            ;
-MBRA:
+            CLR.L       D0
+            CLR.L       D1
+            CLR.L       D2
+            CLR.L       D3
+            CLR.L       D4
+      
+            ;Moves the instruction into D2
+            MOVE.W     (A2),D2
+            
+            ;Setting up parameters for getBits - isolating bits 11-8
+            MOVE.B      #8,D3             ;Start bit index = 8
+            MOVE.B      #4,D4             ;Number of bits needed = 4
+            
+            ;calls getBits subroutine, D2 now has the four condition bits of the Bcc/BRA instruction. 
+            BSR         getBits
+            
+            ;If the condition bits are 0000, the instruction is a BRA instruction. 
+            CMP.L       #%0000,D2
+            BEQ         MBRA
+            
+            ;0100 = BCC
+            CMP.L       #%0100,D2
+            BEQ         MBCC
+            
+            ;1101 = BLT
+            CMP.L       #%1101,D2
+            BEQ         MBLT
+            
+            ;1100 = BGE
+            CMP.L       #%1100,D2
+            BEQ         MBGE
+            
+            ;0111 = BEQ
+            CMP.L       #%0111,D2
+            BEQ         MBEQ
+            
+MBRA: 
+    ;condition bits (11-8) are 0000
+            LEA         printBRA,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            BRA         bccOffset
+            
+MBCC:
+    ;condition bits (11-8) are 0100     
+            LEA         printBCC,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+
+            BRA         bccOffset
 MBLT:
+    ;condition bits (11-8) are 1101
+            LEA         printBLT,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            BRA         bccOffset
 MBGE:
-MBEQ:            
+    ;condition bits (11-8) are 1100
+            LEA         printBGE,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            BRA         bccOffset
+MBEQ:  
+    ;condition bits (11-8) are 0111
+            LEA         printBEQ,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            BRA         bccOffset          
+            
+bccOffset:
+    ;each variation of Bcc, BLT, BEQ, BRA, etc has the same format for the offset bits. Bits 0-7 are either the offset themself, or
+    ;tell us where to look. If it contains $00, then 16-bit offset. If it contains $FF, 32-bit offset.
+    
+            ;Moves the branch family instruction into D2
+            MOVE.W     (A2),D2
+            
+            ;Setting up parameters for getBits - isolating bits 0-7
+            MOVE.B      #0,D3             ;Start bit index = 0
+            MOVE.B      #8,D4             ;Number of bits needed = 8
+
+            ;calls getBits subroutine, D2 now has the offset bits
+            BSR         getBits
+            
+            ;If the offset bits are $00, we need to look at the next 16 bits for the offset.
+            CMP.L       #%00000000,D2
+            BEQ         bit16Displacement
+            
+            ;If the offset bits are $FF, we need to look at the next 32 bits for the offset.
+            CMP.L       #%11111111,D2
+            BEQ         bit32Displacement
+            
+            ;If neither of the above two cases are true, we continue to 8bitDisplacement. 
+            
+bit8Displacement:
+            ;We're here if the 8-bit displacement isn't $00 or $FF, and D2 already has the offset bits.
+            ;D2 is a twos complement integer specifying the number of bytes between the branch instruction 
+            ;and the next instruction to be executed (if the condition is met) 
+            
+            ;A2 is the address of the current instruction we're working with
+            MOVEA.L      A2,A6
+          
+            CMP.B       #$80,D2   ;Check to see if the two's complement value is positive/negative, and branch accordingly.
+            BGE         sub8Bits
+            
+            BRA         add8Bits
+
+add8Bits:
+            ADD.W       D2,A6
+            BRA         continue8Bits
+sub8Bits:
+            ;If the displacement is negative, convert it into a regular value and subtract it from the address.
+            NOT.B       D2      ;inverts D2
+            SUB.B       #1, D2  ;usually we would add 1 to turn this two's complement into a regular number, but we have to 
+                                ;account for the length of the instruction's opperation, which is 2 bytes, so we subtract 1.
+            SUB.W       D2,A6   
+            
+            BRA         continue8Bits
+continue8Bits:
+            
+            ;Output $
+            LEA         printA,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Output destination address
+            MOVE.L      #16,D2  ;sets the base for output - hexadecimal
+            MOVE.L      #15,D0  ;task number
+            MOVE.L      A6,D1
+            TRAP        #15
+            
+            MOVE.L      #$0,A6
+            BRA         update
+bit16Displacement:
+            ;Getting the next 16 bits
+            MOVE.W      (A2)+,D2
+            MOVE.W      (A2),D2
+            MOVEA.L      A2,A6
+          
+            CMP.L       #$8000,D2   ;Check to see if the two's complement value is positive/negative, and branch accordingly.
+            BGE         sub16Bits
+            
+            BRA         add16Bits
+
+            
+add16Bits: 
+            ADD.W       D2,A6
+            BRA         continue16Bits
+sub16Bits:  
+            ;If the displacement is negative, convert it into a regular value and subtract it from the address.
+            NOT.W       D2      ;inverts D2
+            SUB.W       #3, D2  ;usually we would add 1 to turn this two's complement into a regular number, but we have to 
+                                ;account for the length of the instruction's opperation, which is 4 bytes, so we subtract 3.
+            SUB.W       D2,A6   
+            BRA         continue16Bits
+            
+continue16Bits:
+            ;Output $
+            LEA         printA,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Output destination addres
+            MOVE.L      #16,D2  ;sets the base for output - hexadecimal
+            MOVE.L      #15,D0  ;task number
+            MOVE.L      A6,D1
+            TRAP        #15
+            
+            MOVE.L      #$0,A6
+            BRA         update
+            
+bit32Displacement:      ;Getting the next 32 bits
+            MOVE.L      (A2)+,D2
+            MOVE.L      (A2),D2
+            MOVEA.L     A2,A6
+          
+            CMP.L       #$80000000,D2   ;Check to see if the two's complement value is positive/negative, and branch accordingly.
+            BGE         sub32Bits
+            
+            BRA         add32Bits
+
+add32Bits:
+            ADD.L       D2,A6
+            BRA         continue32Bits
+
+sub32Bits:              ;If the displacement is negative, convert it into a regular value and subtract it from the address. 
+            NOT.L       D2      ;inverts D2
+            SUB.L       #5,D2   ;usually we would add 1 to turn this two's complement into a regular number, but we have to 
+                                ;account for the length of the instruction's opperation, which is 6 bytes, so we subtract 5.
+            SUB.L       D2,A6   
+            BRA         continue32Bits
+                  
+continue32Bits:      
+            ;Output $
+            LEA         printA,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            ;Output destination addres
+            MOVE.L      #16,D2  ;sets the base for output - hexadecimal
+            MOVE.L      #15,D0  ;task number
+            MOVE.L      A6,D1
+            TRAP        #15
+      
+            MOVE.L      #$0,A6      
+            BRA         update
+      
             
 
 *-----------------------------------------------------------
@@ -1893,12 +2115,13 @@ printLSL    DC.B        'LSL',0
 printLSR    DC.B        'LSR',0
 printASL    DC.B        'ASL',0
 printASR    DC.B        'ASR',0
-printBLT    DC.B        'BLT',0
-printBGE    DC.B        'BGE',0
-printBEQ    DC.B        'BEQ',0
+printBLT    DC.B        'BLT ',0
+printBGE    DC.B        'BGE ',0
+printBEQ    DC.B        'BEQ ',0
+printBCC    DC.B        'BCC ',0
 printJSR    DC.B        'JSR ',0
 printRTS    DC.B        'RTS',0
-printBRA    DC.B        'BRA',0
+printBRA    DC.B        'BRA ',0
 printMAS    DC.B        'AS',0
 printMLS    DC.B        'LS',0
 printL      DC.B        'L',0    
@@ -1948,6 +2171,7 @@ ending:
             TRAP        #15
             
             END         MAIN 
+
 
 
 
