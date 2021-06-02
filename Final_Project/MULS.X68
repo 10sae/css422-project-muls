@@ -1764,6 +1764,9 @@ ImmediateCount
             MOVE.B     #14,D0
             TRAP       #15
             
+            ;*Data Register to be Shifted*
+            CLR.L       D2
+            
             ;Copy the address values into a register
             MOVE.W     (A2),D2
             
@@ -1778,7 +1781,7 @@ ImmediateCount
             CMP.B       #%000,D2
             BEQ         ShiftEight
             
-            MOVE.B      D2, D1
+            MOVE.L      D2, D1
             BSR         ImmediateCount2
 ;Subroutine to print shift count           
 ImmediateCount2
