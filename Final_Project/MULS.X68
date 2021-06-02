@@ -1650,6 +1650,7 @@ MAND:
 *-----------------------------------------------------------
 * LSL,LSR,ASL,ASR INSTRUCTIONS
 *-----------------------------------------------------------  
+; Subroutine to enter when the instruction begins with 1110
 M1110:
             CLR.L       D2
             CLR.L       D3
@@ -1687,6 +1688,7 @@ M1110:
             ;Checks if LSd
             CMP.B       #%1,D2
             BEQ         RegLS
+; Subroutine to enter if instruction is given data register to shift
 RegShift      
             ;Copy the address values into a register
             MOVE.W     (A2),D2
@@ -1726,7 +1728,7 @@ RegShift
             BSR         addressModeSR
 
             BSR         RegShift2
-
+; Resumes printing data register shift instruction after printing AS or LS
 RegShift2   ;Print comma after shift count
             LEA         printComma,A1
             MOVE.B      #14,D0
@@ -1755,7 +1757,7 @@ RegShift2   ;Print comma after shift count
             BSR         addressModeSR
 
             BRA         update
-            
+;Subroutine to enter if amount to shift is an immediate address            
 ImmediateCount
             ;Print #$
             LEA        printIA,A1
@@ -1778,17 +1780,18 @@ ImmediateCount
             
             MOVE.B      D2, D1
             BSR         ImmediateCount2
-           
+;Subroutine to print shift count           
 ImmediateCount2
             ;Print shift count
             MOVE.B      #3,D0
             TRAP        #15
             BSR         RegShift2
- 
+;Subroutine to enter if shift count is 8
 ShiftEight  ;Move 8 into D1    
             MOVE.B      #8, D1
             BSR         ImmediateCount2
-                                   
+            
+; Subroutine to enter when the instruction is given a memory address to shift                         
 MemShift
             ;Copy the address values into a register
             MOVE.W     (A2),D2
@@ -1807,7 +1810,8 @@ MemShift
             ;Checks if LSd
             CMP.B       #%1,D2
             BEQ         MemLS
-
+            
+; Continues memory address shift after printing AS or LS
 MemShift2   
             ;Print Space
             LEA        printSpace,A1
@@ -1823,7 +1827,7 @@ MemShift2
             BSR         addressModeSR
             
             BRA         update
-            
+
 MemAS       ;Print AS
             BSR         MAS      
             BSR         MemDirectionSubroutine                
@@ -1842,17 +1846,19 @@ RegLS       ;Print LS
             BSR         MLS      
             BSR         RegDirectionSubroutine
 
+; Prints LS
 MLS:
             LEA        printMLS,A1
             MOVE.B     #14,D0
             TRAP       #15
             RTS
+; Prints AS
 MAS:
             LEA        printMAS,A1
             MOVE.B     #14,D0
             TRAP       #15
             RTS
-
+;Subroutine for the direction if shifting a memory address
 MemDirectionSubroutine
             ;Copy the address values into a register
             MOVE.W     (A2),D2
@@ -1881,7 +1887,7 @@ ML          LEA        printL,A1
             MOVE.B     #14,D0
             TRAP       #15
             BSR        MemShift2
-            
+;Subroutine for the direction if shifting a data register        
 RegDirectionSubroutine
             ;Copy the address values into a register
             MOVE.W     (A2),D2
@@ -1910,7 +1916,6 @@ RL          LEA        printL,A1
             MOVE.B     #14,D0
             TRAP       #15
             BSR        RegShift
-
 
 *-----------------------------------------------------------------------
 *-----------------------------------------------------------------------
