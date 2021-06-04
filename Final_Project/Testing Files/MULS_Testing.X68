@@ -144,6 +144,16 @@ BRANCH1:
     MOVE.L  $1234567,$1234567
     
     ;MOVEM
+    MOVEM.L D0-D3/D5/A2-A7, (A3)
+    MOVEM   D0-D3/D5/A2-A7, -(A3)
+    MOVEM   D0-D3/D5/A2-A7, $1234
+    MOVEM   D0-D3/D5/A2-A7, $12345678
+            
+    MOVEM   (A3), D4
+    MOVEM   (A3)+, D4
+    MOVEM   $1234, D4
+    MOVEM   $12345678, D4
+
     
 BRANCH2:    
     ;Testing Add (Some might come as ADDI)
@@ -392,6 +402,7 @@ BRANCH5:
 * Put variables and constants here
 
     END    START        ; last line of source
+
 
 *~Font name~Courier New~
 *~Font size~10~

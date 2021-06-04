@@ -13,13 +13,11 @@ staHex:     DC.L        $0
 endHex:     DC.L        $0
 
 ;Used for MOVEM
-firstBit:   DC.B        $1
 counter:    DC.B        $0
-staIndex:   DC.B        $0
-endIndex:   DC.B        $0
-aRegDone:   DC.B        $0
+totalCount: DC.B        $0
 dORa:       DC.B        $0
-prev:       DC.B        $0
+curAdd:     DC.W        $0
+movemAdd:   DC.B        $0
 *-----------------------------------------------------------
 * I/O Implementation
 ;1. Prompt user for start and ending addresses (In hex)
@@ -39,10 +37,11 @@ prev:       DC.B        $0
                      
             
       
-            MOVEM.L     D0-D7/A0-A6,$23485926
-            ;MOVEM.L     (A5),D0-D2/D5-D7/A0-A3/A6
-            MOVEM.L     $1234,D0-D5/D7/A0-A6
-            MOVEM.L     $1234,A0-A6
+            ;MOVEM.L     D0-D7/A0-A6,$23485926
+            ;MOVEM.L     (A5)+,D0-D2/D5-D7/A0-A3/A6
+            ;MOVEM.L     $1234,D0-D5/D7/A0-A6
+            ;MOVEM.L      $3000,A0-A6
+            ;MOVEM.L     D1/D3-D5/A2-A7,$3004
 
             ;MOVEM.L     D0-D5/D7/A0-A6,-(A7)     
             
@@ -802,6 +801,20 @@ MOVEM:
             ;Print size
             JSR         printMOVEMSize
             
+            ;Clear any value in our gloabal variable just in case
+            MOVE.B      #0,movemAdd
+            
+            ;Next we are going to get the addressing mode to determine how we print the register list
+            ;Isolate bits 0 to 5
+            JSR         isolateAddressBit0to5
+            ;Let's store the addressing mode in our global variable
+            MOVE.B      D6,movemAdd
+            
+            CLR.L       D3
+            CLR.L       D4
+            CLR.L       D6
+            
+            
             ***Isolate Direction bit
             ;Clear D2 and recopy it to check for D bit
             CLR.L       D2
@@ -822,19 +835,23 @@ MOVEM:
             CMP.B       #1,D2
             BEQ         MemToList  
                        
-
-
 ListToMem:
             ***SOURCE(Register List)  
             CLR.L       D2
 
             ;A3 will act as our temp variable 
-            MOVE.L   $00000000,A3
+            MOVE.L      $00000000,A3
             MOVEA.W     A2,A3
             
-            ;Go find the register list
-            BSR         findList
+            ;Reset 
+            MOVE.B     #$00,totalCount
+                        
+            MOVE.B      #1,curAdd
             
+            ;Go find the register list
+            BSR         check
+            
+ListToMem2:
             ;Print the comma after the source address
             LEA         printComma,A1
             MOVE.B      #14,D0
@@ -862,7 +879,7 @@ ListToMem:
             
             BRA        update
 
-            
+
 MemToList:
             ***SOURCE(Memory)***
             ;Clear D2 and recopy it to check for bits 0-5 (to print memory addressing)
@@ -890,18 +907,38 @@ MemToList:
             LEA         printComma,A1
             MOVE.B      #14,D0
             TRAP        #15
+                        
+            ;Reset 
+            MOVE.B      #$00,totalCount
+            
+            MOVE.B      #0,curAdd
             
             ;Go find the register list
-            BRA         findList
-            
-
-            
+            BSR         check
+    
             
 absoluteAddressMOVEM:
             ADDA.W      #2,A2
 
             RTS                     
               
+check:
+            CMP.B       #0,(totalCount)
+            BEQ         findList
+
+            CMP.B       #8,(totalCount)
+            BEQ         findList2
+   
+            ;We go back to ListToMem which was our starting point
+            CMP.B       #1,(curAdd)
+            BEQ         ListToMem2
+             
+            ;If we arrive here, we assume that we started in MemToList      
+            CLR.L      D3
+            
+            BRA        update
+
+
 findList:
             ;Set up the temp register to the register list
             ADDA.W      #2,A3
@@ -919,44 +956,46 @@ findList:
             MOVE.W      (A3),D7
             
             
-            ;===Setting Up Variables===
-            ;Both of our index variables should start at 0
-            MOVE.B      #0,staIndex
-            MOVE.B      #0,endIndex
+            ;===Setting Up Variables===            
             ;Indicate we are at the start of the word for our counter
             MOVE.B      #0,counter
             ;==========================
-                     
-            ;Go through a loop and rotate bits twice for the D registers
-            BSR         bitLoop
+            
+            ;The (dORa) variable changes because it must be the opposite of findList 
+            CMP.B       #3,movemAdd
+            BEQ         setA
+            
+            BRA         setD
 
-check:
-            CMP.B       #0,(aRegDone)
-            BEQ         findList2
-            
-            CLR.L       D3
-            
-            BRA         update
-            
+         
 findList2:           
             CLR.L       D7
             MOVE.B      (A3),D7
-
-            ;If we are not done with MOVEM, then the next time we get here, we will make sure we don't keep looping
-            MOVE.B      #1,aRegDone
             
             ;===Setting Up Variables===
-            ;Use currentReg which indicates whether or not we are printing D or A
-            MOVE.B      #1,dORa
-            ;Both of our index variables should start at 0
-            MOVE.B      #0,staIndex
-            MOVE.B      #0,endIndex
             ;Indicate we are at the start of the word for our counter
             MOVE.B      #0,counter
             ;==========================
             
-            BRA         bitLoop
+            ;The (dORa) variable changes because it must be the opposite of findList            
+            CMP.B       #3,movemAdd
+            BEQ         setD
             
+            BRA         setA
+           
+ 
+setD:
+            MOVE.B      #0,dORa
+            
+            ;Go through a loop and rotate bits twice for the D registers
+            BSR         bitLoop
+ 
+setA:
+            MOVE.B      #1,dORa
+            
+            ;Go through a loop and rotate bits twice for the D registers
+            BSR         bitLoop
+
 bitLoop:
 
             ;If our counter is 8, then we must finish printing the list
@@ -973,59 +1012,20 @@ bitLoop:
             
             ;If the bit is 0, then that means we must print out some values
             CMP.B       #0,D2
-            BEQ         bitLoopHelper
+            BEQ         skipBit
 
-            ;We can extend the ending index for our register range
-            ADD.B       #1,endIndex
- 
-            ;If the bit is 1, then we just increment counter
-            ADD.B       #1,counter
+            BSR         printSingle
             
-            ;Adjust the word to move onto the next bit to check
-            LSR.L       #1,D7 
-                   
-                   
-            ;Loop again
-            BRA         bitLoop
-
-bitLoopHelper:
-            ;If we are at the first bit, then just skip and go back
-            MOVE.B      (staIndex),D3
-            MOVE.B      (endIndex),D4
-            CMP.B        D3,D4
-            BEQ         skipFirst
-            
-            BSR         timePrint
-            
-            BRA         bitLoop
-
-            
-skipFirst:
-            ;Increment our starting index since the first bit was a 0
-            ADD.B       #1,staIndex
+skipBit:
             ;Increment the rest of our variables to set up the loop again
-            ADD.B       #1,endIndex
             ADD.B       #1,counter
+            ADD.B       #1,totalCount
+            
             LSR.L       #1,D7
             
             BRA         bitLoop
+ 
 
-timePrint:            
-            ;if D5 == D6 (meaning only one register to print)
-            ;go to print single
-            MOVE.B      (staIndex),D5
-            MOVE.B      (endIndex),D6
-            CMP.B       D5,D6
-            BEQ         printSingle
-
-            ;if we don't print a single register, then we print the range
-            ;Check and see if we should print D or A
-            CMP.B       #0,(dORa)
-            BEQ         printDReg
-            
-            CMP.B       #1,(dORa)
-            BEQ         printAReg
-            
 printSingle:
             ;Check and see if we should print D or A
             CMP.B       #0,(dORa)
@@ -1041,23 +1041,20 @@ singleDReg:
 
             ;Print out the register number
             CLR.L       D1
-            MOVE.B      (staIndex),D1
-            MOVE.B      #15,D0
-            MOVE.B      #16,D2
+            MOVE.B      (counter),D1
+            MOVE.B      #3,D0
             TRAP        #15
             
             BSR         pSlash
-            
-            ;Increment the rest of our variables to set up the loop again
-            ADD.B       #1,endIndex
-            ;Since we printed out a range, we have a new starting index
-            MOVE.B      endIndex,staIndex
+           
             
             ADD.B       #1,counter
+            ADD.B       #1,totalCount
             
             LSR.L       #1,D7
             
             BRA         bitLoop
+ 
 
 
 singleAReg:
@@ -1067,118 +1064,28 @@ singleAReg:
 
             ;Print out the register number
             CLR.L       D1
-            MOVE.B      (staIndex),D1
-            MOVE.B      #15,D0
-            MOVE.B      #16,D2
+            MOVE.B      (counter),D1
+            MOVE.B      #3,D0
             TRAP        #15
             
             BSR         pSlash
-            
-            ;Increment the rest of our variables to set up the loop again
-            ADD.B       #1,endIndex
-            ;Since we printed out a range, we have a new starting index
-            MOVE.B      endIndex,staIndex
-            
+
+
             ADD.B       #1,counter
+            ADD.B       #1,totalCount
             
             LSR.L       #1,D7
             
             BRA         bitLoop
- 
-printDReg:
-            LEA         printDRD,A1
-            MOVE.B      #14,D0
-            TRAP        #15
-
-            ;Print out the register number
-            CLR.L       D1
-            MOVE.B      (staIndex),D1
-            MOVE.B      #15,D0
-            MOVE.B      #16,D2
-            TRAP        #15
-            
-            BSR         pDash
-            
-            LEA         printDRD,A1
-            MOVE.B      #14,D0
-            TRAP        #15
-
-            ;Print out the end of the range
-            CLR.L       D1
-            MOVE.B      (endIndex),D1
-            SUB.B       #1,D1
-            
-            MOVE.B      #15,D0
-            MOVE.B      #16,D2
-            TRAP        #15
-            
-            BSR         pSlash
-            
-            ;Increment the rest of our variables to set up the loop again
-            ADD.B       #1,endIndex
-            ;Since we printed out a range, we have a new starting index
-            MOVE.B      endIndex,staIndex
-            
-            ADD.B       #1,counter
-            
-            LSL.L       #1,D7       
-
-            BRA         bitLoop
-
-printAReg:
-            LEA         printARD,A1
-            MOVE.B      #14,D0
-            TRAP        #15
-             
-            ;Print out the register number
-            CLR.L       D1
-            MOVE.B      (staIndex),D1
-            MOVE.B      #15,D0
-            MOVE.B      #16,D2
-            TRAP        #15
-            
-            BSR         pDash
-            
-            LEA         printARD,A1
-            MOVE.B      #14,D0
-            TRAP        #15
-            
-            ;Print out the end of the range
-            CLR.L       D1
-            MOVE.B      (endIndex),D1
-            SUB.B       #1,D1
-
-            
-            MOVE.B      #15,D0
-            MOVE.B      #16,D2
-            TRAP        #15
-            
-            BSR         pSlash
-            
-            ;Increment the rest of our variables to set up the loop again
-            ADD.B       #1,endIndex
-            ;Since we printed out a range, we have a new starting index
-            MOVE.B      endIndex,staIndex
-            
-            ADD.B       #1,counter
-
-            LSL.L       #1,D7
- 
-            BRA         bitLoop
          
-pDash:
-            LEA         printDash,A1
-            MOVE.B      #14,D0
-            TRAP        #15
-            
-            RTS
 pSlash:
             LEA         printSlash,A1
             MOVE.B      #14,D0
             TRAP        #15
             
-            RTS
-            
+            RTS       
+        
+       
 MLEA:
             LEA         printLEA,A1
             MOVE.B      #14,D0
@@ -1688,6 +1595,7 @@ M1110:
             ;Checks if LSd
             CMP.B       #%1,D2
             BEQ         RegLS
+
 ; Subroutine to enter if instruction is given data register to shift
 RegShift      
             ;Copy the address values into a register
@@ -1728,6 +1636,8 @@ RegShift
             BSR         addressModeSR
 
             BSR         RegShift2
+
+
 ; Resumes printing data register shift instruction after printing AS or LS
 RegShift2   ;Print comma after shift count
             LEA         printComma,A1
@@ -1757,6 +1667,7 @@ RegShift2   ;Print comma after shift count
             BSR         addressModeSR
 
             BRA         update
+
 ;Subroutine to enter if amount to shift is an immediate address            
 ImmediateCount
             ;Print #$
@@ -1844,7 +1755,6 @@ RegAS       ;Print AS
             BSR         MAS      
             BSR         RegDirectionSubroutine                
 
-            
 RegLS       ;Print LS
             BSR         MLS      
             BSR         RegDirectionSubroutine
@@ -1861,6 +1771,7 @@ MAS:
             MOVE.B     #14,D0
             TRAP       #15
             RTS
+
 ;Subroutine for the direction if shifting a memory address
 MemDirectionSubroutine
             ;Copy the address values into a register
@@ -1890,6 +1801,7 @@ ML          LEA        printL,A1
             MOVE.B     #14,D0
             TRAP       #15
             BSR        MemShift2
+
 ;Subroutine for the direction if shifting a data register        
 RegDirectionSubroutine
             ;Copy the address values into a register
@@ -1920,11 +1832,10 @@ RL          LEA        printL,A1
             TRAP       #15
             BSR        RegShift
 
-*-----------------------------------------------------------------------
-*-----------------------------------------------------------------------
-*-----------------------------------------------------------------------
 
-
+*-----------------------------------------------------------------------
+*-----------------------------------------------------------------------
+*-----------------------------------------------------------------------
 
 
 ;ADD
@@ -2528,6 +2439,14 @@ ending:
             TRAP        #15
             
             END         MAIN  
+
+
+
+
+
+
+
+
 
 
 
