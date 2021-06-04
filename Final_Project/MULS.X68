@@ -18,6 +18,7 @@ totalCount: DC.B        $0
 dORa:       DC.B        $0
 curAdd:     DC.W        $0
 movemAdd:   DC.B        $0
+listSize:   DC.B        $0
 *-----------------------------------------------------------
 * I/O Implementation
 ;1. Prompt user for start and ending addresses (In hex)
@@ -39,7 +40,7 @@ movemAdd:   DC.B        $0
       
             ;MOVEM.L     D0-D7/A0-A6,$23485926
             ;MOVEM.L     (A5)+,D0-D2/D5-D7/A0-A3/A6
-            ;MOVEM.L     $1234,D0-D5/D7/A0-A6
+            MOVEM.L     $1234,D0-D5/D7/A0-A6
             ;MOVEM.L      $3000,A0-A6
             ;MOVEM.L     D1/D3-D5/A2-A7,$3004
 
@@ -1027,6 +1028,8 @@ skipBit:
  
 
 printSingle:
+            ;update number of registers included in the list
+            ADD.B       #1,listSize
             ;Check and see if we should print D or A
             CMP.B       #0,(dORa)
             BEQ         singleDReg
@@ -1035,6 +1038,12 @@ printSingle:
             BEQ         singleAReg
 
 singleDReg:
+            CMP.B       #1,listSize
+            BEQ         skipSlashD
+       
+            BSR         pSlash
+            
+skipSlashD:
             LEA         printDRD,A1
             MOVE.B      #14,D0
             TRAP        #15
@@ -1043,10 +1052,7 @@ singleDReg:
             CLR.L       D1
             MOVE.B      (counter),D1
             MOVE.B      #3,D0
-            TRAP        #15
-            
-            BSR         pSlash
-           
+            TRAP        #15           
             
             ADD.B       #1,counter
             ADD.B       #1,totalCount
@@ -1058,6 +1064,12 @@ singleDReg:
 
 
 singleAReg:
+            CMP.B       #1,listSize
+            BEQ         skipSlashA
+       
+            BSR         pSlash
+            
+skipSlashA:
             LEA         printARD,A1
             MOVE.B      #14,D0
             TRAP        #15
@@ -1067,9 +1079,6 @@ singleAReg:
             MOVE.B      (counter),D1
             MOVE.B      #3,D0
             TRAP        #15
-            
-            BSR         pSlash
-
 
             ADD.B       #1,counter
             ADD.B       #1,totalCount
@@ -2439,6 +2448,7 @@ ending:
             TRAP        #15
             
             END         MAIN  
+
 
 
 
