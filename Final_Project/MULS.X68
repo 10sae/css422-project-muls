@@ -37,13 +37,15 @@ listSize:   DC.B        $0
             TRAP        #15
                      
             
-      
-            ;MOVEM.L     D0-D7/A0-A6,$23485926
-            ;MOVEM.L     (A5)+,D0-D2/D5-D7/A0-A3/A6
+            MOVEM.L     (A5)+,D0-D2/D5-D7/A0-A3/A6
+            MOVEM.L     (A5),D0-D2/D5-D7/A0-A3/A6
+            MOVEM.L     D0-D2/D5-D7/A0-A3/A6,-(A5)
             MOVEM.L     $1234,D0-D5/D7/A0-A6
-            ;MOVEM.L      $3000,A0-A6
-            ;MOVEM.L     D1/D3-D5/A2-A7,$3004
-
+            MOVEM.L     $3000,A0-A6
+            MOVEM.L     D1/D3-D5/A2-A7,$3004
+            MOVEM.L     D0-D5/A2-A7,$3030
+            MOVEM.L     D0-D5/A2-A7,-(A7)
+            ;MOVEM.L     $3212,D0/D2/A5/A7
             ;MOVEM.L     D0-D5/D7/A0-A6,-(A7)     
             
 ;==========================            
@@ -846,7 +848,8 @@ ListToMem:
             
             ;Reset 
             MOVE.B     #$00,totalCount
-                        
+            MOVE.B     #$00,listSize
+         
             MOVE.B      #1,curAdd
             
             ;Go find the register list
@@ -911,6 +914,7 @@ MemToList:
                         
             ;Reset 
             MOVE.B      #$00,totalCount
+            MOVE.B      #$00,listSize
             
             MOVE.B      #0,curAdd
             
@@ -2448,6 +2452,7 @@ ending:
             TRAP        #15
             
             END         MAIN  
+
 
 
 
