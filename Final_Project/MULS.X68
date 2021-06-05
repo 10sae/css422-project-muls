@@ -35,22 +35,7 @@ listSize:   DC.B        $0
             LEA         Welcome,A1
             MOVE.B      #14,D0
             TRAP        #15
-                     
-            OR.B        #12,D0
-            CMP.L       #$45123456,D3
-            
-            ROL.W       #5,D2
-            
-            MOVEM.L     (A5)+,D0-D2/D5-D7/A0-A3/A6
-            MOVEM.L     (A5),D0-D2/D5-D7/A0-A3/A6
-            MOVEM.L     D0-D2/D5-D7/A0-A3/A6,-(A5)
-            MOVEM.L     $1234,D0-D5/D7/A0-A6
-            MOVEM.L     $3000,A0-A6
-            MOVEM.L     D1/D3-D5/A2-A7,$3004
-            MOVEM.L     D0-D5/A2-A7,$3030
-            MOVEM.L     D0-D5/A2-A7,-(A7)
-            ;MOVEM.L     $3212,D0/D2/A5/A7
-            ;MOVEM.L     D0-D5/D7/A0-A6,-(A7)     
+                      
             
 ;==========================            
             
@@ -363,27 +348,13 @@ LOOP:
             CMP.B       #%1101,D2
             BEQ         M1101
             
-            ;If the first 4 bits do not match any of the opcodes listed
-            ;then we must have an invalid opcode
-            BSR         invalid
+            ;BSR         invalOpCode
             
-            BRA         ending                    
+            BRA         ending
             
-invalid:
-            LEA         invalOpcode,A1
-            MOVE.B      #14,D0
-            TRAP        #15
+            
+            
 
-            ;Clear any previous data that might have been there
-            CLR.L      D1
-
-            ;Print out the hex value from the address
-            MOVE.L      #15,D0
-            MOVE.L      #16,D2
-            MOVE.W      (A2),D1
-            TRAP        #15
-
-            BRA         update
            
 update:
             *=====Important if we've done any Immediate or Absolute addressing=====*
@@ -402,13 +373,32 @@ skipA6:
             BGT        ending
 
             ;Update address in A2
-            ADD.W      #2,A2
+            ADDA.W      #2,A2
             
-            ;Clear size storage 
-            MOVE.L     #$00000000,$2000
             
             BRA        LOOP
             
+
+
+            ;Subroutine for printing D1.L in hex:
+hex_L:      MOVE.W  #0, -(A7) ; Push a null termination for the string to be printed.
+            MOVEA.L A7, A1    ; Initialize A1 to the current value of stack pointer.
+            MOVE.L  D1, D0    ; Copy source value into D0, so that D1 is preserved.
+hex_1L:     MOVE.B  D0, D2    ; Beginning of the loop; copy the current byte into D2.
+            ANDI.B  #$F, D2   ; Apply a mask to isolate the current hex digit.
+            CMP.B   #$9, D2   ; Compare the current hex value to $9.
+            BLE     hex_2L    ; If value is between $0 and $9, skip the next line.
+            ADDI.B  #7, D2    ; If value is above $9, add an extra 7 to its ASCII.
+hex_2L:     ADDI.B  #48, D2   ; Add 48 to get ASCII code of the current hex digit.
+            SUBA.L  #1, A1    ; Shift the address pointer back by one byte.
+            MOVE.B  D2, (A1)  ; Copy ASCII value of the current digit to the stack.
+            LSR.L   #4, D0    ; Shift the remainder to the right by one hex digit.
+            BNE     hex_1L    ; If remainder is nonzero, loop to get the next digit.
+            MOVE.L  #14, D0   ; Task ID #14 for printing a null-terminated string.
+            TRAP    #15       ; Print the hex string equivalent of the source value.
+            ADDA.L  #2, A7    ; Point the stack pointer back at the return address.
+            RTS               
+
             
 getBits:
             ;GETS ___ MANY BITS STARTING FROM __ START BIT INDEX
@@ -474,27 +464,12 @@ M0000:
             ;--------------------------------------------------------
             CMP.B       #%0100,D2
             BEQ         MSUBI
-            
-            ;--------------------------------------------------------
-            ;Check for ANDI
-            ;--------------------------------------------------------
-            CMP.B       #%0010,D2
-            BEQ         MANDI
-            
-            MANDI:
-            LEA         printANDI,A1
-            MOVE.B      #14,D0
-            TRAP        #15
-            
-            BRA         continueI
-
 
 MADDI:
             LEA         printADDI,A1
             MOVE.B      #14,D0
             TRAP        #15
-
-continueI:            
+            
             CLR.L       D2
             CLR.L       D3
             
@@ -657,12 +632,6 @@ M00:
             
             ;Jumps to getBits and returns with isolated bits in D2
             BSR         getBits  
-            
-            ;Check and see if we have the MOVE opcode since it shares with others
-            CMP.B       #0,D2
-            BEQ         invalid
-            
-            CLR.L       D3
             
             ;Indicate to our print function we are doing this for the MOVE opcode
             MOVE.B      #1,D3
@@ -1008,7 +977,7 @@ findList:
             ;==========================
             
             ;The (dORa) variable changes because it must be the opposite of findList 
-            CMP.B       #4,movemAdd
+            CMP.B       #3,movemAdd
             BEQ         setA
             
             BRA         setD
@@ -1024,7 +993,7 @@ findList2:
             ;==========================
             
             ;The (dORa) variable changes because it must be the opposite of findList            
-            CMP.B       #4,movemAdd
+            CMP.B       #3,movemAdd
             BEQ         setD
             
             BRA         setA
@@ -1341,6 +1310,7 @@ bit8Displacement:
             BRA         add8Bits
 
 add8Bits:
+            ADD.W       #2,D2
             ADD.W       D2,A6
             BRA         continue8Bits
 sub8Bits:
@@ -1369,10 +1339,10 @@ continue8Bits:
             BRA         update
 bit16Displacement:
             ;Getting the next 16 bits
+            MOVEA.L      A2,A6
             MOVE.W      (A2)+,D2
             MOVE.W      (A2),D2
-            MOVEA.L      A2,A6
-          
+                      
             CMP.L       #$8000,D2   ;Check to see if the two's complement value is positive/negative, and branch accordingly.
             BGE         sub16Bits
             
@@ -1380,14 +1350,15 @@ bit16Displacement:
 
             
 add16Bits: 
+            ADD.W       #2,D2
             ADD.W       D2,A6
             BRA         continue16Bits
 
 sub16Bits:  
             ;If the displacement is negative, convert it into a regular value and subtract it from the address.
             NOT.W       D2      ;inverts D2
-            SUB.W       #3, D2  ;usually we would add 1 to turn this two's complement into a regular number, but we have to 
-                                ;account for the length of the instruction's opperation, which is 4 bytes, so we subtract 3.
+            SUB.W       #1, D2  ;usually we would add 1 to turn this two's complement into a regular number, but we have to 
+                                ;account for the length of the instruction's opperation, which is 2 bytes, so we subtract 1.
             SUB.W       D2,A6   
             BRA         continue16Bits
             
@@ -1407,9 +1378,10 @@ continue16Bits:
             BRA         update
             
 bit32Displacement:      ;Getting the next 32 bits
+            MOVEA.L     A2,A6
             MOVE.L      (A2)+,D2
             MOVE.L      (A2),D2
-            MOVEA.L     A2,A6
+            
           
             CMP.L       #$80000000,D2   ;Check to see if the two's complement value is positive/negative, and branch accordingly.
             BGE         sub32Bits
@@ -1417,13 +1389,14 @@ bit32Displacement:      ;Getting the next 32 bits
             BRA         add32Bits
 
 add32Bits:
+            ADD.W       #2,D2
             ADD.L       D2,A6
             BRA         continue32Bits
 
 sub32Bits:              ;If the displacement is negative, convert it into a regular value and subtract it from the address. 
             NOT.L       D2      ;inverts D2
-            SUB.L       #5,D2   ;usually we would add 1 to turn this two's complement into a regular number, but we have to 
-                                ;account for the length of the instruction's opperation, which is 6 bytes, so we subtract 5.
+            SUB.L       #1,D2   ;usually we would add 1 to turn this two's complement into a regular number, but we have to 
+                                ;account for the length of the instruction's opperation, which is 2 bytes, so we subtract 1.
             SUB.L       D2,A6   
             BRA         continue32Bits
 
@@ -1585,9 +1558,6 @@ MAND:
             ;Jumps to printSizeSubroutine and returns after size has been printed
             BSR         printSizeSubroutine
             
-            ;save size bit in $2000 incase needed for immediate addressing
-            MOVE.B      D2,$2000
-            
             ;======Isolate direction (D) Bit=======
             ; 0 = data register is destination | 1 = Dn is source
             CLR.L       D2
@@ -1618,26 +1588,6 @@ MAND:
 M1110:
             CLR.L       D2
             CLR.L       D3
-            
-            ;Let's first check and see if the opcode might be ROXd or ROd
-            ;since they share the same first 4 bits
-            MOVE.W      (A2),D2
-            
-            ;Passing in parameters for isolating bits 9-11
-            MOVE.B      #9,D3
-            MOVE.B      #3,D4
-            
-            ;These next two checks help us know if we have the right opcode
-            CMP.B       #%010,D2
-            BEQ         invalid
-            
-            CMP.B       #%111,D2
-            BEQ         invalid
-            
-            ;Now that we know we have the right opcode, we can continue as normal
-            CLR.L       D2
-            CLR.L       D3
-            CLR.L       D4            
             
             ;Copy the address values into a register
             MOVE.W     (A2),D2
@@ -1778,10 +1728,7 @@ ImmediateCount2
             TRAP        #15
             BSR         RegShift2
 ;Subroutine to enter if shift count is 8
-ShiftEight  
-            CLR.L       D1
-            
-            ;Move 8 into D1    
+ShiftEight  ;Move 8 into D1    
             MOVE.B      #8, D1
             BSR         ImmediateCount2
             
@@ -2296,7 +2243,7 @@ Immediate:
             
             ;Since we are dealing with addresses, we update our address to account for the actual address value
             ;We will be able to access the contents of either size B or W
-            ADDA.W      #2,A6         
+            ADDA.W      #2,A2         
 
             ;If the value is a Long then branch to ImmLong to get the remaining bits of the value
             CMP.B       #%10,$2000
@@ -2304,7 +2251,7 @@ Immediate:
             
             ;If we don't branch, then we assume we're printing out a byte or word      
             MOVE.L      #3,D0
-            MOVE.W      (A6),D1
+            MOVE.W      (A2),D1
             TRAP        #15
             
             RTS
@@ -2359,23 +2306,22 @@ AbsLong:
             
             RTS    
         
-        
 IMDLong:
             *********USED FOR IMMEDIATE LONGS ONLY***************
             
             ;Place the current value into a temp register
-            MOVE.W      (A6),D4
+            MOVE.W      (A2),D4
             
             ;Shift the bits so we can enter the rest of the values
             MOVE.B      #16,D7
             LSL.L       D7,D4
             
             ;Increment A2 to account for the next values in the machine code
-            ADDA.W      #2,A6
+            ADDA.W      #2,A2
             
             ;Move the rest of the machine code into our register
             ;This register should have the whole long values
-            MOVE.W      (A6),D4
+            MOVE.W      (A2),D4
             
             ;Print out the value in the address
             MOVE.L      #3,D0
@@ -2383,6 +2329,7 @@ IMDLong:
             TRAP        #15
             
             RTS
+
 
 *-----------------------------------------------------------
 * Print Instructions for NOP and RTS
@@ -2454,19 +2401,18 @@ printMULS   DC.B        'MULS.W ',0
 printDIVU   DC.B        'DIVU.W ',0
 printLEA    DC.B        'LEA ',0
 printAND    DC.B        'AND',0
-printANDI   DC.B        'ANDI',0
 printNOT    DC.B        'NOT',0
 printLSL    DC.B        'LSL',0
 printLSR    DC.B        'LSR',0
 printASL    DC.B        'ASL',0
 printASR    DC.B        'ASR',0
-printBLT    DC.B        'BLT',0
-printBGE    DC.B        'BGE',0
-printBEQ    DC.B        'BEQ',0
+printBLT    DC.B        'BLT ',0
+printBGE    DC.B        'BGE ',0
+printBEQ    DC.B        'BEQ ',0
 printBCC    DC.B        'BCC ',0
 printJSR    DC.B        'JSR ',0
 printRTS    DC.B        'RTS',0
-printBRA    DC.B        'BRA',0
+printBRA    DC.B        'BRA ',0
 printMAS    DC.B        'AS',0
 printMLS    DC.B        'LS',0
 printL      DC.B        'L',0    
@@ -2507,7 +2453,7 @@ odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
 manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the address',CR,LF,0
 endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
 sizeError   DC.B        'ERROR: Invalid size instruction',0
-invalOpcode DC.B        'ERROR: Invalid opcode = ',0
+invalOpcode DC.B        'ERROR: INVALID OPCODE = ',0
 
             CLR.L       D3     
 
@@ -2520,9 +2466,6 @@ ending:
             TRAP        #15
             
             END         MAIN  
-
-
-
 
 
 
