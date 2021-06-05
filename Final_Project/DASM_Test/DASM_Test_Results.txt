@@ -1,10 +1,10 @@
-EASy68K output log file: 6/2/2021 1:52:35 PM
+EASy68K output log file: 6/4/2021 9:00:25 PM
 
 Welcome to the DASM by Group MULS
 Please enter your starting hex address (Only uppercase letters)
 100
 Please enter your ending hex address (Only uppercase letters)
-586
+5AeE
 
 Address: 100 NOP
 Address: 102 RTS
@@ -134,50 +134,51 @@ Address: 2D6 AND.B (A1)+,D2
 Address: 2D8 AND.B -(A1),D2
 Address: 2DA AND.B $1234,D2
 Address: 2DE AND.B $12345678,D2
-Address: 2E4 AND.B #1229587,D1
-Address: 2EA ADDI.B #18,(A3)
+Address: 2E4 AND.B #18,D2
+Address: 2E8 AND.B D1,(A3)
+Address: 2EA ANDI.B #18,(A3)
 Address: 2EE AND.B D1,(A3)+
-Address: 2F0 ADDI.B #18,(A3)+
+Address: 2F0 ANDI.B #18,(A3)+
 Address: 2F4 AND.B D1,-(A3)
-Address: 2F6 ADDI.B #18,-(A3)
+Address: 2F6 ANDI.B #18,-(A3)
 Address: 2FA AND.B D1,$1234
-Address: 2FE ADDI.B #18,$1234
+Address: 2FE ANDI.B #18,$1234
 Address: 304 AND.B D1,$12345678
-Address: 30A ADDI.B #18,$12345678
+Address: 30A ANDI.B #18,$12345678
 Address: 312 AND.W D0,D2
 Address: 314 AND.W (A1),D2
 Address: 316 AND.W (A1)+,D2
 Address: 318 AND.W -(A1),D2
 Address: 31A AND.W $1234,D2
 Address: 31E AND.W $12345678,D2
-Address: 324 AND.W #18,D0
+Address: 324 AND.W #18,D2
 Address: 328 AND.W D1,(A3)
-Address: 32A ADDI.W #18,(A3)
+Address: 32A ANDI.W #18,(A3)
 Address: 32E AND.W D1,(A3)+
-Address: 330 ADDI.W #18,(A3)+
+Address: 330 ANDI.W #18,(A3)+
 Address: 334 AND.W D1,-(A3)
-Address: 336 ADDI.W #18,-(A3)
+Address: 336 ANDI.W #18,-(A3)
 Address: 33A AND.W D1,$1234
-Address: 33E ADDI.W #18,$1234
+Address: 33E ANDI.W #18,$1234
 Address: 344 AND.W D1,$12345678
-Address: 34A ADDI.W #18,$12345678
+Address: 34A ANDI.W #18,$12345678
 Address: 352 AND.L D0,D2
 Address: 354 AND.L (A1),D2
 Address: 356 AND.L (A1)+,D2
 Address: 358 AND.L -(A1),D2
 Address: 35A AND.L $1234,D2
 Address: 35E AND.L $12345678,D2
-Address: 364 AND.L #0,D0
-Address: 368 ADDI.B #50067,(A2)
-Address: 36C ADDI.L #18,(A3)
+Address: 364 AND.L #18,D2
+Address: 36A AND.L D1,(A3)
+Address: 36C ANDI.L #18,(A3)
 Address: 372 AND.L D1,(A3)+
-Address: 374 ADDI.L #18,(A3)+
+Address: 374 ANDI.L #18,(A3)+
 Address: 37A AND.L D1,-(A3)
-Address: 37C ADDI.L #18,-(A3)
+Address: 37C ANDI.L #18,-(A3)
 Address: 382 AND.L D1,$1234
-Address: 386 ADDI.L #18,$1234
+Address: 386 ANDI.L #18,$1234
 Address: 38E AND.L D1,$12345678
-Address: 394 ADDI.L #18,$12345678
+Address: 394 ANDI.L #18,$12345678
 Address: 39E MOVE.B D0,D2
 Address: 3A0 MOVE.B (A1),D2
 Address: 3A2 MOVE.B (A1)+,D2
@@ -218,5 +219,149 @@ Address: 422 MOVE.L (A1)+,D2
 Address: 424 MOVE.L -(A1),D2
 Address: 426 MOVE.L $1234,D2
 Address: 42A MOVE.L $12345678,D2
-Address: 430 
+Address: 430 ERROR: Invalid opcode = 7412
+Address: 432 MOVE.L D1,(A3)
+Address: 434 MOVE.L #18,(A3)
+Address: 43A MOVE.L D1,(A3)+
+Address: 43C MOVE.L #18,(A3)+
+Address: 442 MOVE.L D1,-(A3)
+Address: 444 MOVE.L #18,-(A3)
+Address: 44A MOVE.L D1,$1234
+Address: 44E MOVE.L #18,$1234
+Address: 456 MOVE.L D1,$12345678
+Address: 45C MOVE.L #18,$12345678
+Address: 466 LSL.B #1,D3
+Address: 468 LSL.B #2,D3
+Address: 46A LSL.B #3,D3
+Address: 46C LSL.B #4,D3
+Address: 46E LSL.B #5,D3
+Address: 470 LSL.B #6,D3
+Address: 472 LSL.B #7,D3
+Address: 474 LSL.B #8,D3
+Address: 476 LSL.W #1,D3
+Address: 478 LSL.W #2,D3
+Address: 47A LSL.W #3,D3
+Address: 47C LSL.W #4,D3
+Address: 47E LSL.W #5,D3
+Address: 480 LSL.W #6,D3
+Address: 482 LSL.W #7,D3
+Address: 484 LSL.W #8,D3
+Address: 486 LSL.L #1,D3
+Address: 488 LSL.L #2,D3
+Address: 48A LSL.L #3,D3
+Address: 48C LSL.L #4,D3
+Address: 48E LSL.L #5,D3
+Address: 490 LSL.L #6,D3
+Address: 492 LSL.L #7,D3
+Address: 494 LSL.L #8,D3
+Address: 496 LSR.B #1,D3
+Address: 498 LSR.B #2,D3
+Address: 49A LSR.B #3,D3
+Address: 49C LSR.B #4,D3
+Address: 49E LSR.B #5,D3
+Address: 4A0 LSR.B #6,D3
+Address: 4A2 LSR.B #7,D3
+Address: 4A4 LSR.B #8,D3
+Address: 4A6 LSR.W #1,D3
+Address: 4A8 LSR.W #2,D3
+Address: 4AA LSR.W #3,D3
+Address: 4AC LSR.W #4,D3
+Address: 4AE LSR.W #5,D3
+Address: 4B0 LSR.W #6,D3
+Address: 4B2 LSR.W #7,D3
+Address: 4B4 LSR.W #8,D3
+Address: 4B6 LSR.L #1,D3
+Address: 4B8 LSR.L #2,D3
+Address: 4BA LSR.L #3,D3
+Address: 4BC LSR.L #4,D3
+Address: 4BE LSR.L #5,D3
+Address: 4C0 LSR.L #6,D3
+Address: 4C2 LSR.L #7,D3
+Address: 4C4 LSR.L #8,D3
+Address: 4C6 ASL.B #1,D3
+Address: 4C8 ASL.B #2,D3
+Address: 4CA ASL.B #3,D3
+Address: 4CC ASL.B #4,D3
+Address: 4CE ASL.B #5,D3
+Address: 4D0 ASL.B #6,D3
+Address: 4D2 ASL.B #7,D3
+Address: 4D4 ASL.B #8,D3
+Address: 4D6 ASL.W #1,D3
+Address: 4D8 ASL.W #2,D3
+Address: 4DA ASL.W #3,D3
+Address: 4DC ASL.W #4,D3
+Address: 4DE ASL.W #5,D3
+Address: 4E0 ASL.W #6,D3
+Address: 4E2 ASL.W #7,D3
+Address: 4E4 ASL.W #8,D3
+Address: 4E6 ASL.L #1,D3
+Address: 4E8 ASL.L #2,D3
+Address: 4EA ASL.L #3,D3
+Address: 4EC ASL.L #4,D3
+Address: 4EE ASL.L #5,D3
+Address: 4F0 ASL.L #6,D3
+Address: 4F2 ASL.L #7,D3
+Address: 4F4 ASL.L #8,D3
+Address: 4F6 ASR.B #1,D3
+Address: 4F8 ASR.B #2,D3
+Address: 4FA ASR.B #3,D3
+Address: 4FC ASR.B #4,D3
+Address: 4FE ASR.B #5,D3
+Address: 500 ASR.B #6,D3
+Address: 502 ASR.B #7,D3
+Address: 504 ASR.B #8,D3
+Address: 506 ASR.W #1,D3
+Address: 508 ASR.W #2,D3
+Address: 50A ASR.W #3,D3
+Address: 50C ASR.W #4,D3
+Address: 50E ASR.W #5,D3
+Address: 510 ASR.W #6,D3
+Address: 512 ASR.W #7,D3
+Address: 514 ASR.W #8,D3
+Address: 516 ASR.L #1,D3
+Address: 518 ASR.L #2,D3
+Address: 51A ASR.L #3,D3
+Address: 51C ASR.L #4,D3
+Address: 51E ASR.L #5,D3
+Address: 520 ASR.L #6,D3
+Address: 522 ASR.L #7,D3
+Address: 524 ASR.L #8,D3
+Address: 526 LEA (A1),A2
+Address: 528 LEA $1234,A2
+Address: 52C LEA $12345678,A2
+Address: 532 MULS.W D2,D5
+Address: 534 MULS.W (A2),D5
+Address: 536 MULS.W (A2)+,D5
+Address: 538 MULS.W -(A2),D5
+Address: 53A MULS.W $1234,D5
+Address: 53E MULS.W $12345678,D5
+Address: 544 MULS.W #4660,D5
+Address: 548 DIVU.W D2,D5
+Address: 54A DIVU.W (A2),D5
+Address: 54C DIVU.W (A2)+,D5
+Address: 54E DIVU.W -(A2),D5
+Address: 550 DIVU.W $1234,D5
+Address: 554 DIVU.W $12345678,D5
+Address: 55A DIVU.W #4660,D5
+Address: 55E JSR (A1)
+Address: 560 JSR $1234
+Address: 564 JSR $12345678
+Address: 56A BLT$56A
+Address: 56C BLT$16
+Address: 570 BLT$1234
+Address: 574 BGE$574
+Address: 576 BGE$1234
+Address: 57A BEQ$57A
+Address: 57C BEQ$1234
+Address: 580 BRA$580
+Address: 582 BRA$16
+Address: 586 BRA$1234
+Address: 58A MOVEM.W D0/D1/D2/D3/D5/A2/A3/A4/A5/A6/A7,(A3)
+Address: 58E MOVEM.W A0/A1/A2/A3/A4/A5/D2/D4/D5/D6/D7,-(A3)
+Address: 592 MOVEM.W D0/D1/D2/D3/D5/A2/A3/A4/A5/A6/A7,$1234
+Address: 598 MOVEM.W D0/D1/D2/D3/D5/A2/A3/A4/A5/A6/A7,$12345678
+Address: 5A0 MOVEM.W (A3),D4
+Address: 5A4 MOVEM.W (A3)+,D4
+Address: 5A8 MOVEM.W $1234,D4
+Address: 5AE MOVEM.W $12345678,D4
 You are now ending the program

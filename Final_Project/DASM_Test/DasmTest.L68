@@ -1,6 +1,6 @@
 00000100 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 6/2/2021 1:30:55 PM
+Created On: 6/4/2021 8:51:43 PM
 
 00000000                             1  ; =============================================================================
 00000000                             2  ; DasmTest.X68 : Jim Hogg : 2021
@@ -601,10 +601,20 @@ Created On: 6/2/2021 1:30:55 PM
 00000582  6000 FA8E                597          BRA.W   $12
 00000586  6000 0CAC                598          BRA.W   $1234
 0000058A                           599          
-0000058A                           600          ;tMOVEM
-0000058A                           601  
-0000058A  FFFF FFFF                602          SIMHALT 
-0000058E                           603          END     main  
+0000058A                           600m         tMOVEM
+0000058A  4893 FC2F                601m             MOVEM   D0-D3/D5/A2-A7, (A3)
+0000058E  48A3 F43F                602m             MOVEM   D0-D3/D5/A2-A7, -(A3)
+00000592  48B8 FC2F 1234           603m             MOVEM   D0-D3/D5/A2-A7, $1234
+00000598  48B9 FC2F 12345678       604m             MOVEM   D0-D3/D5/A2-A7, $12345678
+000005A0                           605m             
+000005A0  4C93 0010                606m             MOVEM   (A3), D4
+000005A4  4C9B 0010                607m             MOVEM   (A3)+, D4
+000005A8  4CB8 0010 1234           608m             MOVEM   $1234, D4
+000005AE  4CB9 0010 12345678       609m             MOVEM   $12345678, D4
+000005B6                           610m             ENDM
+000005B6                           611  
+000005B6  FFFF FFFF                612          SIMHALT 
+000005BA                           613          END     main  
 
 No errors detected
 No warnings generated

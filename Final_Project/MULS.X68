@@ -35,22 +35,12 @@ listSize:   DC.B        $0
             LEA         Welcome,A1
             MOVE.B      #14,D0
             TRAP        #15
+                     
+            OR.B        #12,D0
+            CMP.L       #$45123456,D3
             
-            ;AND.L       $12345678,D2
-            AND.L       #$12,D1
-            AND         #$12,$12345678
-            ADD.L       D1,$12345678
-            ADDI.L      #18,$12345678
-
-            MULS.W #$1234,D5       
-             ;MOVE.L D0,D2
-             ;MOVE.L (A1),D2
-             ;MOVE.L (A1)+,D2
-             ;MOVE.L -(A1),D2
-             ;MOVE.L $1234,D2
-             ;MOVE.L $12345678,D2
-             MOVE.L  #$12,       D2
-             
+            ROL.W       #5,D2
+            
             MOVEM.L     (A5)+,D0-D2/D5-D7/A0-A3/A6
             MOVEM.L     (A5),D0-D2/D5-D7/A0-A3/A6
             MOVEM.L     D0-D2/D5-D7/A0-A3/A6,-(A5)
@@ -373,13 +363,27 @@ LOOP:
             CMP.B       #%1101,D2
             BEQ         M1101
             
-            ;BSR         invalOpCode
+            ;If the first 4 bits do not match any of the opcodes listed
+            ;then we must have an invalid opcode
+            BSR         invalid
             
-            BRA         ending
+            BRA         ending                    
             
-            
-            
+invalid:
+            LEA         invalOpcode,A1
+            MOVE.B      #14,D0
+            TRAP        #15
 
+            ;Clear any previous data that might have been there
+            CLR.L      D1
+
+            ;Print out the hex value from the address
+            MOVE.L      #15,D0
+            MOVE.L      #16,D2
+            MOVE.W      (A2),D1
+            TRAP        #15
+
+            BRA         update
            
 update:
             *=====Important if we've done any Immediate or Absolute addressing=====*
@@ -398,10 +402,10 @@ skipA6:
             BGT        ending
 
             ;Update address in A2
-            ADDA.W      #2,A2
+            ADD.W      #2,A2
             
-            ;Clear size storage
-            MOVE.L      #$00000000,$2000
+            ;Clear size storage 
+            MOVE.L     #$00000000,$2000
             
             BRA        LOOP
             
@@ -470,25 +474,27 @@ M0000:
             ;--------------------------------------------------------
             CMP.B       #%0100,D2
             BEQ         MSUBI
+            
             ;--------------------------------------------------------
             ;Check for ANDI
             ;--------------------------------------------------------
             CMP.B       #%0010,D2
             BEQ         MANDI
             
-MANDI:
+            MANDI:
             LEA         printANDI,A1
             MOVE.B      #14,D0
             TRAP        #15
             
             BRA         continueI
 
+
 MADDI:
             LEA         printADDI,A1
             MOVE.B      #14,D0
             TRAP        #15
 
-continueI:
+continueI:            
             CLR.L       D2
             CLR.L       D3
             
@@ -651,6 +657,12 @@ M00:
             
             ;Jumps to getBits and returns with isolated bits in D2
             BSR         getBits  
+            
+            ;Check and see if we have the MOVE opcode since it shares with others
+            CMP.B       #0,D2
+            BEQ         invalid
+            
+            CLR.L       D3
             
             ;Indicate to our print function we are doing this for the MOVE opcode
             MOVE.B      #1,D3
@@ -996,7 +1008,7 @@ findList:
             ;==========================
             
             ;The (dORa) variable changes because it must be the opposite of findList 
-            CMP.B       #3,movemAdd
+            CMP.B       #4,movemAdd
             BEQ         setA
             
             BRA         setD
@@ -1012,7 +1024,7 @@ findList2:
             ;==========================
             
             ;The (dORa) variable changes because it must be the opposite of findList            
-            CMP.B       #3,movemAdd
+            CMP.B       #4,movemAdd
             BEQ         setD
             
             BRA         setA
@@ -1607,6 +1619,26 @@ M1110:
             CLR.L       D2
             CLR.L       D3
             
+            ;Let's first check and see if the opcode might be ROXd or ROd
+            ;since they share the same first 4 bits
+            MOVE.W      (A2),D2
+            
+            ;Passing in parameters for isolating bits 9-11
+            MOVE.B      #9,D3
+            MOVE.B      #3,D4
+            
+            ;These next two checks help us know if we have the right opcode
+            CMP.B       #%010,D2
+            BEQ         invalid
+            
+            CMP.B       #%111,D2
+            BEQ         invalid
+            
+            ;Now that we know we have the right opcode, we can continue as normal
+            CLR.L       D2
+            CLR.L       D3
+            CLR.L       D4            
+            
             ;Copy the address values into a register
             MOVE.W     (A2),D2
             
@@ -1746,8 +1778,10 @@ ImmediateCount2
             TRAP        #15
             BSR         RegShift2
 ;Subroutine to enter if shift count is 8
-ShiftEight  ;Move 8 into D1
-            CLR.L       D1    
+ShiftEight  
+            CLR.L       D1
+            
+            ;Move 8 into D1    
             MOVE.B      #8, D1
             BSR         ImmediateCount2
             
@@ -2325,6 +2359,7 @@ AbsLong:
             
             RTS    
         
+        
 IMDLong:
             *********USED FOR IMMEDIATE LONGS ONLY***************
             
@@ -2348,7 +2383,6 @@ IMDLong:
             TRAP        #15
             
             RTS
-
 
 *-----------------------------------------------------------
 * Print Instructions for NOP and RTS
@@ -2473,7 +2507,7 @@ odd         DC.B        'ERROR: Cannot start at odd memory location',CR,LF,0
 manyChar    DC.B        'ERROR: Cannot have more than 6 characters in the address',CR,LF,0
 endG        DC.B        'ERROR: The ending address cannot be less than the starting address',CR,LF,0
 sizeError   DC.B        'ERROR: Invalid size instruction',0
-invalOpcode DC.B        'ERROR: INVALID OPCODE = ',0
+invalOpcode DC.B        'ERROR: Invalid opcode = ',0
 
             CLR.L       D3     
 
@@ -2486,7 +2520,6 @@ ending:
             TRAP        #15
             
             END         MAIN  
-
 
 
 

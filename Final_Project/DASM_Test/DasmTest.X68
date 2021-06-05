@@ -172,12 +172,14 @@ L4:     BRA.B   L4
         BRA.W   $12
         BRA.W   $1234
         
-        ;tMOVEM
+        tMOVEM
 
         SIMHALT 
         END     main  
 
     
+
+
 
 
 
