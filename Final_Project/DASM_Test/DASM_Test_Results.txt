@@ -1,10 +1,10 @@
-EASy68K output log file: 6/4/2021 9:00:25 PM
+EASy68K output log file: 6/4/2021 10:11:12 PM
 
 Welcome to the DASM by Group MULS
 Please enter your starting hex address (Only uppercase letters)
 100
 Please enter your ending hex address (Only uppercase letters)
-5AeE
+5AE
 
 Address: 100 NOP
 Address: 102 RTS
@@ -219,7 +219,7 @@ Address: 422 MOVE.L (A1)+,D2
 Address: 424 MOVE.L -(A1),D2
 Address: 426 MOVE.L $1234,D2
 Address: 42A MOVE.L $12345678,D2
-Address: 430 ERROR: Invalid opcode = 7412
+Address: 430 ERROR: Invalid opcode = 430
 Address: 432 MOVE.L D1,(A3)
 Address: 434 MOVE.L #18,(A3)
 Address: 43A MOVE.L D1,(A3)+
@@ -346,16 +346,16 @@ Address: 55A DIVU.W #4660,D5
 Address: 55E JSR (A1)
 Address: 560 JSR $1234
 Address: 564 JSR $12345678
-Address: 56A BLT$56A
-Address: 56C BLT$16
-Address: 570 BLT$1234
-Address: 574 BGE$574
-Address: 576 BGE$1234
-Address: 57A BEQ$57A
-Address: 57C BEQ$1234
-Address: 580 BRA$580
-Address: 582 BRA$16
-Address: 586 BRA$1234
+Address: 56A BLT $56A
+Address: 56C BLT $12
+Address: 570 BLT $1234
+Address: 574 BGE $574
+Address: 576 BGE $1234
+Address: 57A BEQ $57A
+Address: 57C BEQ $1234
+Address: 580 BRA $580
+Address: 582 BRA $12
+Address: 586 BRA $1234
 Address: 58A MOVEM.W D0/D1/D2/D3/D5/A2/A3/A4/A5/A6/A7,(A3)
 Address: 58E MOVEM.W A0/A1/A2/A3/A4/A5/D2/D4/D5/D6/D7,-(A3)
 Address: 592 MOVEM.W D0/D1/D2/D3/D5/A2/A3/A4/A5/A6/A7,$1234

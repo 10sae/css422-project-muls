@@ -34,30 +34,11 @@ listSize:   DC.B        $0
            ;Show welcome to user
             LEA         Welcome,A1
             MOVE.B      #14,D0
-            TRAP        #15
-                     
-            OR.B        #12,D0
-            CMP.L       #$45123456,D3
+            TRAP        #15                                  
             
-            ROL.W       #5,D2
             
-             BRA     startingPrompt   
-L1:         BLT     L1
-            BLT     $12
-            BLT     $1234
+            DIVU.W   $1234, D5
 
-L2:         BGE     L3
-            BGE     $1234
-        
-L3:         BEQ     L3
-            BEQ     $1234
-        
-L4:         BRA.B   L4
-            BRA.W   $12
-            BRA.W   $1234       
-            ;MOVEM.L     $3212,D0/D2/A5/A7
-            ;MOVEM.L     D0-D5/D7/A0-A6,-(A7)     
-            
 ;==========================            
             
 startingPrompt:
@@ -263,10 +244,9 @@ LOOP:
             TRAP        #15
             
             ;Print out the address
-            MOVE.L      #15,D0
-            MOVE.L      #16,D2
             MOVE.L      A2,D1
-            TRAP        #15
+            BSR         hex_L
+            
             
             LEA         printSpace,A1
             MOVE.B      #14,D0
@@ -384,10 +364,9 @@ invalid:
             CLR.L      D1
 
             ;Print out the hex value from the address
-            MOVE.L      #15,D0
-            MOVE.L      #16,D2
-            MOVE.W      (A2),D1
-            TRAP        #15
+            MOVE.W      A2,D1
+            BSR         hex_L
+
 
             BRA         update
            
@@ -1367,10 +1346,8 @@ continue8Bits:
             TRAP        #15
             
             ;Output destination address
-            MOVE.L      #16,D2  ;sets the base for output - hexadecimal
-            MOVE.L      #15,D0  ;task number
             MOVE.L      A6,D1
-            TRAP        #15
+            BSR         hex_L
             
             MOVE.L      #$0,A6
             BRA         update
@@ -1406,10 +1383,8 @@ continue16Bits:
             TRAP        #15
             
             ;Output destination addres
-            MOVE.L      #16,D2  ;sets the base for output - hexadecimal
-            MOVE.L      #15,D0  ;task number
             MOVE.L      A6,D1
-            TRAP        #15
+            BSR         hex_L
             
             MOVE.L      #$0,A6
             BRA         update
@@ -1444,10 +1419,8 @@ continue32Bits:
             TRAP        #15
             
             ;Output destination addres
-            MOVE.L      #16,D2  ;sets the base for output - hexadecimal
-            MOVE.L      #15,D0  ;task number
             MOVE.L      A6,D1
-            TRAP        #15
+            BSR         hex_L
       
             MOVE.L      #$0,A6      
             BRA         update
@@ -1476,7 +1449,7 @@ M1000:
             BEQ         continueDIVU
             
             ;************TO DO: BRANCH TO ERROR MESSAGE IF NOT DIVU**************
-
+            BRA         invalid
 continueDIVU:
 
             LEA         printDIVU,A1
@@ -2338,10 +2311,8 @@ Absolute:
             ;Print out the value in the address if it's a word
             CLR.L       D1
             
-            MOVE.W      #15,D0
-            MOVE.W      #16,D2
             MOVE.W      (A6),D1
-            TRAP        #15
+            BSR         hex_L
             
             RTS
             
@@ -2363,10 +2334,8 @@ AbsLong:
             ;Print the Long address
             CLR.L       D1
             
-            MOVE.L      #15,D0
-            MOVE.L      #16,D2
             MOVE.L      D4,D1
-            TRAP        #15
+            BSR         hex_L
             
             RTS    
         
@@ -2411,6 +2380,29 @@ printMRTS:
             TRAP       #15
             
             BRA        update
+            
+*---------------------------------------------------------------------------------
+* Subroutine for printing D1.L in hex:
+*---------------------------------------------------------------------------------
+hex_L:  MOVE.W  #0, -(A7) ; Push a null termination for the string to be printed.
+        MOVEA.L A7, A1    ; Initialize A1 to the current value of stack pointer.
+        MOVE.L  D1, D0    ; Copy source value into D0, so that D1 is preserved.
+hex_1L: MOVE.B  D0, D2    ; Beginning of the loop; copy the current byte into D2.
+        ANDI.B  #$F, D2   ; Apply a mask to isolate the current hex digit.
+        CMP.B   #$9, D2   ; Compare the current hex value to $9.
+        BLE     hex_2L    ; If value is between $0 and $9, skip the next line.
+        ADDI.B  #7, D2    ; If value is above $9, add an extra 7 to its ASCII.
+hex_2L: ADDI.B  #48, D2   ; Add 48 to get ASCII code of the current hex digit.
+        SUBA.L  #1, A1    ; Shift the address pointer back by one byte.
+        MOVE.B  D2, (A1)  ; Copy ASCII value of the current digit to the stack.
+        LSR.L   #4, D0    ; Shift the remainder to the right by one hex digit.
+        BNE     hex_1L    ; If remainder is nonzero, loop to get the next digit.
+        MOVE.L  #14, D0   ; Task ID #14 for printing a null-terminated string.
+        TRAP    #15       ; Print the hex string equivalent of the source value.
+        ADDA.L  #2, A7    ; Point the stack pointer back at the return address.
+        RTS               ; Exit the subroutine
+*---------------------------------------------------------------------------------
+
 ;-----------------------------------------------------------
 ;ERROR MESSAGES FOR I/O portion
 ;-----------------------------------------------------------
@@ -2531,6 +2523,8 @@ ending:
             TRAP        #15
             
             END         MAIN  
+
+
 
 
 
