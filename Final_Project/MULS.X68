@@ -35,11 +35,14 @@ listSize:   DC.B        $0
             LEA         Welcome,A1
             MOVE.B      #14,D0
             TRAP        #15
-              
-            ADD.L D1,$12345678
-        ADDI.L #18,$12345678
+            
+            ;AND.L       $12345678,D2
+            AND.L       #$12,D1
+            AND         #$12,$12345678
+            ADD.L       D1,$12345678
+            ADDI.L      #18,$12345678
 
-        MULS.W #$1234,D5       
+            MULS.W #$1234,D5       
              ;MOVE.L D0,D2
              ;MOVE.L (A1),D2
              ;MOVE.L (A1)+,D2
@@ -467,12 +470,25 @@ M0000:
             ;--------------------------------------------------------
             CMP.B       #%0100,D2
             BEQ         MSUBI
+            ;--------------------------------------------------------
+            ;Check for ANDI
+            ;--------------------------------------------------------
+            CMP.B       #%0010,D2
+            BEQ         MANDI
+            
+MANDI:
+            LEA         printANDI,A1
+            MOVE.B      #14,D0
+            TRAP        #15
+            
+            BRA         continueI
 
 MADDI:
             LEA         printADDI,A1
             MOVE.B      #14,D0
             TRAP        #15
-            
+
+continueI:
             CLR.L       D2
             CLR.L       D3
             
@@ -1557,6 +1573,9 @@ MAND:
             ;Jumps to printSizeSubroutine and returns after size has been printed
             BSR         printSizeSubroutine
             
+            ;save size bit in $2000 incase needed for immediate addressing
+            MOVE.B      D2,$2000
+            
             ;======Isolate direction (D) Bit=======
             ; 0 = data register is destination | 1 = Dn is source
             CLR.L       D2
@@ -2243,7 +2262,7 @@ Immediate:
             
             ;Since we are dealing with addresses, we update our address to account for the actual address value
             ;We will be able to access the contents of either size B or W
-            ADDA.W      #2,A2         
+            ADDA.W      #2,A6         
 
             ;If the value is a Long then branch to ImmLong to get the remaining bits of the value
             CMP.B       #%10,$2000
@@ -2251,7 +2270,7 @@ Immediate:
             
             ;If we don't branch, then we assume we're printing out a byte or word      
             MOVE.L      #3,D0
-            MOVE.W      (A2),D1
+            MOVE.W      (A6),D1
             TRAP        #15
             
             RTS
@@ -2310,18 +2329,18 @@ IMDLong:
             *********USED FOR IMMEDIATE LONGS ONLY***************
             
             ;Place the current value into a temp register
-            MOVE.W      (A2),D4
+            MOVE.W      (A6),D4
             
             ;Shift the bits so we can enter the rest of the values
             MOVE.B      #16,D7
             LSL.L       D7,D4
             
             ;Increment A2 to account for the next values in the machine code
-            ADDA.W      #2,A2
+            ADDA.W      #2,A6
             
             ;Move the rest of the machine code into our register
             ;This register should have the whole long values
-            MOVE.W      (A2),D4
+            MOVE.W      (A6),D4
             
             ;Print out the value in the address
             MOVE.L      #3,D0
@@ -2401,6 +2420,7 @@ printMULS   DC.B        'MULS.W ',0
 printDIVU   DC.B        'DIVU.W ',0
 printLEA    DC.B        'LEA ',0
 printAND    DC.B        'AND',0
+printANDI   DC.B        'ANDI',0
 printNOT    DC.B        'NOT',0
 printLSL    DC.B        'LSL',0
 printLSR    DC.B        'LSR',0
@@ -2466,6 +2486,8 @@ ending:
             TRAP        #15
             
             END         MAIN  
+
+
 
 
 
