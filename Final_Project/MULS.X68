@@ -35,8 +35,19 @@ listSize:   DC.B        $0
             LEA         Welcome,A1
             MOVE.B      #14,D0
             TRAP        #15
-                     
-            
+              
+            ADD.L D1,$12345678
+        ADDI.L #18,$12345678
+
+        MULS.W #$1234,D5       
+             ;MOVE.L D0,D2
+             ;MOVE.L (A1),D2
+             ;MOVE.L (A1)+,D2
+             ;MOVE.L -(A1),D2
+             ;MOVE.L $1234,D2
+             ;MOVE.L $12345678,D2
+             MOVE.L  #$12,       D2
+             
             MOVEM.L     (A5)+,D0-D2/D5-D7/A0-A3/A6
             MOVEM.L     (A5),D0-D2/D5-D7/A0-A3/A6
             MOVEM.L     D0-D2/D5-D7/A0-A3/A6,-(A5)
@@ -386,6 +397,8 @@ skipA6:
             ;Update address in A2
             ADDA.W      #2,A2
             
+            ;Clear size storage
+            MOVE.L      #$00000000,$2000
             
             BRA        LOOP
             
@@ -1714,8 +1727,8 @@ ImmediateCount2
             TRAP        #15
             BSR         RegShift2
 ;Subroutine to enter if shift count is 8
-ShiftEight  ;Move 8 into D1    
-            CLR.L       D1
+ShiftEight  ;Move 8 into D1
+            CLR.L       D1    
             MOVE.B      #8, D1
             BSR         ImmediateCount2
             
@@ -2453,6 +2466,9 @@ ending:
             TRAP        #15
             
             END         MAIN  
+
+
+
 
 
 
