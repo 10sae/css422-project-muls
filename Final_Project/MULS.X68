@@ -1715,6 +1715,7 @@ ImmediateCount2
             BSR         RegShift2
 ;Subroutine to enter if shift count is 8
 ShiftEight  ;Move 8 into D1    
+            CLR.L       D1
             MOVE.B      #8, D1
             BSR         ImmediateCount2
             
